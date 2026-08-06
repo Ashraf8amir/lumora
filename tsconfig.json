@@ -9,15 +9,13 @@
     "sourceMap": true,
     "outDir": "./dist",
 
-    "baseUrl": "./",
-
     "paths": {
-      "@app/*": ["src/app/*"],
-      "@core/*": ["src/core/*"],
-      "@common/*": ["src/common/*"],
-      "@modules/*": ["src/modules/*"],
-      "@shared/*": ["src/shared/*"],
-      "@types/*": ["src/types/*"]
+      "@app/*": ["./src/app/*"],
+      "@core/*": ["./src/core/*"],
+      "@common/*": ["./src/common/*"],
+      "@modules/*": ["./src/modules/*"],
+      "@shared/*": ["./src/shared/*"],
+      "@types/*": ["./src/types/*"]
     },
 
     "incremental": true,
