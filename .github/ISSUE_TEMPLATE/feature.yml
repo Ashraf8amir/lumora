@@ -1,14 +1,23 @@
 name: Feature
-description: Create a new feature
-title: '[Feature]: '
+description: Create a new feature request
+title: 'LUM-XXX: '
 labels:
   - feature
+
 body:
-  - type: textarea
-    id: description
+  - type: input
+    id: feature_name
     attributes:
-      label: Description
-      placeholder: Describe the feature...
+      label: Feature Name
+      placeholder: Configure Application Configuration
+    validations:
+      required: true
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      placeholder: Brief description of the feature...
     validations:
       required: true
 
@@ -16,7 +25,8 @@ body:
     id: tasks
     attributes:
       label: Tasks
-      placeholder: |
+      value: |
+        - [ ]
         - [ ]
         - [ ]
         - [ ]
@@ -27,8 +37,14 @@ body:
     id: acceptance
     attributes:
       label: Acceptance Criteria
-      placeholder: |
+      value: |
+        - [ ]
         - [ ]
         - [ ]
     validations:
       required: true
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Technical Notes
