@@ -1,0 +1,23 @@
+name: Documentation
+description: Add or update documentation
+title: '[Docs]: '
+labels:
+  - documentation
+
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      placeholder: Describe the documentation update...
+    validations:
+      required: true
+
+  - type: textarea
+    id: files
+    attributes:
+      label: Files
+      placeholder: |
+        docs/...
+    validations:
+      required: true
