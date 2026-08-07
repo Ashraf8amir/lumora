@@ -1,0 +1,20 @@
+export default () => ({
+  app: {
+    port: Number(process.env.PORT),
+    nodeEnv: process.env.NODE_ENV,
+  },
+
+  // database: {
+  //   uri: process.env.DATABASE_URI,
+  //   retryAttempts: Number(process.env.DATABASE_RETRY_ATTEMPTS) || 3,
+  //   retryDelay: Number(process.env.DATABASE_RETRY_DELAY) || 3000,
+  //   maxPoolSize: Number(process.env.DATABASE_MAX_POOL_SIZE) || 15,
+  //   minPoolSize: Number(process.env.DATABASE_MIN_POOL_SIZE) || 3,
+  //   serverSelectionTimeoutMS: Number(process.env.DATABASE_SERVER_SELECTION_TIMEOUT_MS) || 10000,
+  // },
+
+  // jwt: {
+  //   secret: process.env.JWT_SECRET,
+  //   expiresIn: process.env.JWT_EXPIRES_IN,
+  // },
+});
