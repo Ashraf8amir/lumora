@@ -15,6 +15,15 @@ export const envValidationSchema = Joi.object({
       'any.required': 'NODE_ENV is required',
     }),
 
+  APP_NAME: Joi.string().required().messages({
+    'any.required': 'APP_NAME is required',
+  }),
+
+  SLACK_WEBHOOK_URL: Joi.string().uri().required().messages({
+    'string.uri': 'SLACK_WEBHOOK_URL must be a valid URL',
+    'any.required': 'SLACK_WEBHOOK_URL is required',
+  }),
+
   // MONGO_URI: Joi.string().required(),
 
   // JWT_SECRET: Joi.string().required(),
