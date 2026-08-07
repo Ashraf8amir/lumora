@@ -19,7 +19,8 @@
       "@modules/*": ["./src/modules/*"],
       "@shared/*": ["./src/shared/*"],
       "@types/*": ["./src/types/*"],
-      "@config/*": ["./src/config/*"]
+      "@config/*": ["./src/config/*"],
+      "@logger/*": ["./src/logger/*"]
     },
 
     "incremental": true,
@@ -52,5 +53,7 @@
     "resolvePackageJsonExports": true,
 
     "removeComments": true
-  }
+  },
+
+  "exclude": ["node_modules", "dist"]
 }

@@ -2,6 +2,11 @@ export default () => ({
   app: {
     port: Number(process.env.PORT),
     nodeEnv: process.env.NODE_ENV,
+    appName: process.env.APP_NAME,
+  },
+
+  slack: {
+    webhookUrl: process.env.SLACK_WEBHOOK_URL,
   },
 
   // database: {
