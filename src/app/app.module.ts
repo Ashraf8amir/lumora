@@ -3,6 +3,8 @@ import { ConfigurationModule } from '@config/index';
 import { ClsModule } from 'nestjs-cls';
 import { v4 as uuidv4 } from 'uuid';
 import { LoggerMiddleware } from '@/common/middlewares/logger.middleware';
+import { ApiResponseInterceptor } from '@/common/response';
+import { APP_INTERCEPTOR } from '@nestjs/core';
 
 @Module({
   imports: [
@@ -15,6 +17,13 @@ import { LoggerMiddleware } from '@/common/middlewares/logger.middleware';
       },
     }),
     ConfigurationModule,
+  ],
+
+  providers: [
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: ApiResponseInterceptor,
+    },
   ],
 })
 export class AppModule implements NestModule {
