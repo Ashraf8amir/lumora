@@ -6,5 +6,11 @@ export interface ResponseEnvelope<T> {
 }
 
 export function isResponseEnvelope<T>(value: unknown): value is ResponseEnvelope<T> {
-  return typeof value === 'object' && value !== null && 'data' in value;
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'data' in value &&
+    'metadata' in value &&
+    typeof (value as Record<string, any>).metadata === 'object'
+  );
 }
