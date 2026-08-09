@@ -2,7 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { Logger } from '@nestjs/common';
 import { AppModule } from '@app/app.module';
 import { WinstonModule } from 'nest-winston/dist/winston.module';
-import { createWinstonConfig } from '@logger/logger.config';
+import { createWinstonConfig } from '@common/logger/logger.config';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
