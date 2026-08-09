@@ -35,8 +35,6 @@ The project focuses on scalability, maintainability, clean architecture, and pro
 - Global Exception Handling
 - Request Validation
 - Structured Logging
-- Docker Support
-- CI/CD Ready
 
 ---
 
