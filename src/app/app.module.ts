@@ -4,7 +4,8 @@ import { ClsModule } from 'nestjs-cls';
 import { v4 as uuidv4 } from 'uuid';
 import { LoggerMiddleware } from '@/common/middlewares/logger.middleware';
 import { ApiResponseInterceptor } from '@/common/response';
-import { APP_INTERCEPTOR } from '@nestjs/core';
+import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
+import { AllExceptionsFilter } from '@/common/exceptions';
 
 @Module({
   imports: [
@@ -23,6 +24,10 @@ import { APP_INTERCEPTOR } from '@nestjs/core';
     {
       provide: APP_INTERCEPTOR,
       useClass: ApiResponseInterceptor,
+    },
+    {
+      provide: APP_FILTER,
+      useClass: AllExceptionsFilter,
     },
   ],
 })
