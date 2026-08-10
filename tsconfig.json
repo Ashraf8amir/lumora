@@ -20,7 +20,8 @@
       "@shared/*": ["./src/shared/*"],
       "@types/*": ["./src/types/*"],
       "@config/*": ["./src/config/*"],
-      "@logger/*": ["./src/logger/*"]
+      "@logger/*": ["./src/logger/*"],
+      "@infrastructure/*": ["./src/infrastructure/*"]
     },
 
     "incremental": true,

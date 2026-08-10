@@ -24,7 +24,33 @@ export const envValidationSchema = Joi.object({
     'any.required': 'SLACK_WEBHOOK_URL is required',
   }),
 
-  // MONGO_URI: Joi.string().required(),
-
-  // JWT_SECRET: Joi.string().required(),
+  DATABASE_URI: Joi.string().uri().required().messages({
+    'string.uri': 'DATABASE_URI must be a valid URL',
+    'any.required': 'DATABASE_URI is required',
+  }),
+  DATABASE_RETRY_ATTEMPTS: Joi.number().integer().min(0).default(3).messages({
+    'number.base': 'DATABASE_RETRY_ATTEMPTS must be a number',
+    'number.integer': 'DATABASE_RETRY_ATTEMPTS must be an integer',
+    'number.min': 'DATABASE_RETRY_ATTEMPTS must be greater than or equal to 0',
+  }),
+  DATABASE_RETRY_DELAY: Joi.number().integer().min(0).default(3000).messages({
+    'number.base': 'DATABASE_RETRY_DELAY must be a number',
+    'number.integer': 'DATABASE_RETRY_DELAY must be an integer',
+    'number.min': 'DATABASE_RETRY_DELAY must be greater than or equal to 0',
+  }),
+  DATABASE_MAX_POOL_SIZE: Joi.number().integer().min(1).default(15).messages({
+    'number.base': 'DATABASE_MAX_POOL_SIZE must be a number',
+    'number.integer': 'DATABASE_MAX_POOL_SIZE must be an integer',
+    'number.min': 'DATABASE_MAX_POOL_SIZE must be greater than or equal to 1',
+  }),
+  DATABASE_MIN_POOL_SIZE: Joi.number().integer().min(0).default(3).messages({
+    'number.base': 'DATABASE_MIN_POOL_SIZE must be a number',
+    'number.integer': 'DATABASE_MIN_POOL_SIZE must be an integer',
+    'number.min': 'DATABASE_MIN_POOL_SIZE must be greater than or equal to 0',
+  }),
+  DATABASE_SERVER_SELECTION_TIMEOUT_MS: Joi.number().integer().min(0).default(10000).messages({
+    'number.base': 'DATABASE_SERVER_SELECTION_TIMEOUT_MS must be a number',
+    'number.integer': 'DATABASE_SERVER_SELECTION_TIMEOUT_MS must be an integer',
+    'number.min': 'DATABASE_SERVER_SELECTION_TIMEOUT_MS must be greater than or equal to 0',
+  }),
 });

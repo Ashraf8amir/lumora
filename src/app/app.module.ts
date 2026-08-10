@@ -6,6 +6,7 @@ import { LoggerMiddleware } from '@/common/middlewares/logger.middleware';
 import { ApiResponseInterceptor } from '@/common/response';
 import { APP_FILTER, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { AllExceptionsFilter } from '@/common/exceptions';
+import { DatabaseModule } from '@/database/mongoose/database.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { AllExceptionsFilter } from '@/common/exceptions';
       },
     }),
     ConfigurationModule,
+    DatabaseModule,
   ],
 
   providers: [
