@@ -7,6 +7,7 @@ import { ApiResponseInterceptor } from '@/common/response';
 import { APP_FILTER, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { AllExceptionsFilter } from '@/common/exceptions';
 import { DatabaseModule } from '@/database/mongoose/database.module';
+import { RedisModule } from '@/infrastructure/redis/redis.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { DatabaseModule } from '@/database/mongoose/database.module';
     }),
     ConfigurationModule,
     DatabaseModule,
+    RedisModule,
   ],
 
   providers: [

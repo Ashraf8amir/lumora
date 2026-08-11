@@ -6,7 +6,6 @@ export const envValidationSchema = Joi.object({
     'number.base': 'PORT must be a number',
     'any.required': 'PORT is required',
   }),
-
   NODE_ENV: Joi.string()
     .valid(...Object.values(Environment))
     .required()
@@ -14,7 +13,6 @@ export const envValidationSchema = Joi.object({
       'any.only': 'NODE_ENV must be one of development, production, test',
       'any.required': 'NODE_ENV is required',
     }),
-
   APP_NAME: Joi.string().required().messages({
     'any.required': 'APP_NAME is required',
   }),
@@ -52,5 +50,24 @@ export const envValidationSchema = Joi.object({
     'number.base': 'DATABASE_SERVER_SELECTION_TIMEOUT_MS must be a number',
     'number.integer': 'DATABASE_SERVER_SELECTION_TIMEOUT_MS must be an integer',
     'number.min': 'DATABASE_SERVER_SELECTION_TIMEOUT_MS must be greater than or equal to 0',
+  }),
+
+  REDIS_HOST: Joi.string().required().messages({
+    'any.required': 'REDIS_HOST is required',
+  }),
+  REDIS_PORT: Joi.number().integer().min(1).max(65535).required().messages({
+    'number.base': 'REDIS_PORT must be a number',
+    'number.integer': 'REDIS_PORT must be an integer',
+    'number.min': 'REDIS_PORT must be greater than or equal to 1',
+    'number.max': 'REDIS_PORT must be less than or equal to 65535',
+    'any.required': 'REDIS_PORT is required',
+  }),
+  REDIS_PASSWORD: Joi.string().required().messages({
+    'any.required': 'REDIS_PASSWORD is required',
+  }),
+  REDIS_DB: Joi.number().integer().min(0).default(0).messages({
+    'number.base': 'REDIS_DB must be a number',
+    'number.integer': 'REDIS_DB must be an integer',
+    'number.min': 'REDIS_DB must be greater than or equal to 0',
   }),
 });

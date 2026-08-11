@@ -17,4 +17,11 @@ export default () => ({
     minPoolSize: Number(process.env.DATABASE_MIN_POOL_SIZE) || 3,
     serverSelectionTimeoutMS: Number(process.env.DATABASE_SERVER_SELECTION_TIMEOUT_MS) || 10000,
   },
+
+  redis: {
+    host: process.env.REDIS_HOST,
+    port: Number(process.env.REDIS_PORT),
+    password: process.env.REDIS_PASSWORD,
+    db: Number(process.env.REDIS_DB) || 0,
+  },
 });
