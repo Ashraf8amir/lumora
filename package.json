@@ -15,8 +15,8 @@
     "lint:fix": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "seed:dev": "cross-env NODE_ENV=development ts-node -r tsconfig-paths/register src/database/seeder/seeder-runner.ts",
-    "seed:prod": "cross-env NODE_ENV=production node -r tsconfig-paths/register dist/database/seeder/seeder-runner.ts",
-    "indexes:prod": "cross-env NODE_ENV=production node -r tsconfig-paths/register dist/database/indexes/indexes-runner.ts"
+    "seed:prod": "cross-env NODE_ENV=production node -r tsconfig-paths/register dist/database/seeder/seeder-runner.js",
+    "indexes:prod": "cross-env NODE_ENV=production node -r tsconfig-paths/register dist/database/indexes/sync-indexes.js"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",

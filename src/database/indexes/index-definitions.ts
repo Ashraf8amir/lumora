@@ -18,15 +18,6 @@ export const INDEX_DEFINITIONS: IndexDefinition[] = [
     spec: { isDeleted: 1, role: 1 },
     options: { name: 'idx_users_isDeleted_role' },
   },
-  {
-    collection: 'users',
-    spec: { createdAt: 1 },
-    options: {
-      expireAfterSeconds: 60 * 60 * 24 * 30,
-      name: 'idx_users_unverified_ttl',
-      partialFilterExpression: { isEmailVerified: false },
-    },
-  },
 
   // ==================== PRODUCTS COLLECTION ====================
   {
