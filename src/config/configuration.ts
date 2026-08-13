@@ -24,4 +24,10 @@ export default () => ({
     password: process.env.REDIS_PASSWORD,
     db: Number(process.env.REDIS_DB) || 0,
   },
+
+  swagger: {
+    enabledInProduction: process.env.SWAGGER_ENABLE_IN_PROD === 'true',
+    basicAuthUser: process.env.SWAGGER_USERNAME,
+    basicAuthPassword: process.env.SWAGGER_PASSWORD,
+  },
 });
