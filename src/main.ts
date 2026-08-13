@@ -3,7 +3,7 @@ import { Logger } from '@nestjs/common';
 import { AppModule } from '@app/app.module';
 import { WinstonModule } from 'nest-winston/dist/winston.module';
 import { createWinstonConfig } from '@infrastructure/logger/logger.config';
-import { setupSwagger } from './core/swagger/setup-swagger';
+import { setupSwagger } from '@infrastructure/swagger/setup-swagger';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');

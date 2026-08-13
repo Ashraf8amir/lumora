@@ -1,3 +1,5 @@
+import { Role } from '@common/enums/role.enum';
+
 export enum Permission {
   PROFILE_READ = 'profile:read',
   PROFILE_WRITE = 'profile:write',
@@ -27,13 +29,6 @@ export enum Permission {
   TICKETS_UPDATE_STATUS = 'tickets:update_status',
   TASKS_READ_ASSIGNED = 'tasks:read_assigned',
   TASKS_UPDATE_ASSIGNED = 'tasks:update_assigned',
-}
-
-export enum Role {
-  ADMIN = 'admin',
-  CUSTOMER = 'customer',
-  STORE_MANAGER = 'store_manager',
-  TECHNICIAN = 'technician',
 }
 
 export const DEFAULT_ROLES = [

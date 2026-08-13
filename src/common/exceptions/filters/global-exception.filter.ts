@@ -9,7 +9,7 @@ import {
 import { HttpAdapterHost } from '@nestjs/core';
 import { ClsService } from 'nestjs-cls';
 
-import { BusinessException } from '../utils/business.exception';
+import { BusinessException } from '../exceptions/business.exception';
 import { ErrorResponse } from '../interfaces/error-response.interface';
 import { ErrorCode } from '../enums/error-code.enum';
 import { Environment } from '../../enums/environment.enum';

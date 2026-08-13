@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 
-import { RedisService } from '../redis/redis.service';
+import { RedisService } from '../providers/redis/redis.service';
 import { JsonSerializer } from './json.serializer';
 
 @Injectable()
