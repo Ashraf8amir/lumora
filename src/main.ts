@@ -1,19 +1,27 @@
-import { NestFactory } from '@nestjs/core';
 import { Logger } from '@nestjs/common';
-import { AppModule } from '@app/app.module';
-import { WinstonModule } from 'nest-winston/dist/winston.module';
-import { createWinstonConfig } from '@infrastructure/logger/logger.config';
-import { setupSwagger } from '@infrastructure/swagger/setup-swagger';
+import { bootstrap } from './app/bootstrap';
 
-async function bootstrap() {
-  const logger = new Logger('Bootstrap');
+async function main() {
+  const app = await bootstrap();
+  const port = process.env.PORT ?? 3000;
 
-  const app = await NestFactory.create(AppModule, {
-    logger: WinstonModule.createLogger(createWinstonConfig()),
-  });
+  await app.listen(port);
 
-  setupSwagger(app);
-  await app.listen(process.env.PORT ?? 3000);
-  logger.log(`Server is running on http://localhost:${process.env.PORT ?? 3000}`);
+  new Logger('Bootstrap').log(
+    `Server running on port ${port} [${process.env.NODE_ENV ?? 'development'}]`,
+  );
 }
-bootstrap();
+
+main().catch((error) => {
+  new Logger('Bootstrap').error('Error during bootstrap', error.stack);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason) => {
+  new Logger('UnhandledRejection').error(`Unhandled Rejection: ${reason}`);
+});
+
+process.on('uncaughtException', (error) => {
+  new Logger('UncaughtException').error(error.message, error.stack);
+  process.exit(1);
+});
