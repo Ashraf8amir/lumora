@@ -11,12 +11,22 @@ export const INDEX_DEFINITIONS: IndexDefinition[] = [
   {
     collection: 'users',
     spec: { email: 1 },
-    options: { unique: true, name: 'idx_users_email_unique' },
+    options: { unique: true, name: 'email_unique' },
   },
   {
     collection: 'users',
-    spec: { isDeleted: 1, role: 1 },
-    options: { name: 'idx_users_isDeleted_role' },
+    spec: { isDeleted: 1 },
+    options: { name: 'is_deleted_index' },
+  },
+  {
+    collection: 'users',
+    spec: { role: 1, isActive: 1 },
+    options: { name: 'role_isActive_index' },
+  },
+  {
+    collection: 'users',
+    spec: { fullName: 'text', email: 'text' },
+    options: { name: 'user_search_text_index' },
   },
 
   // ==================== PRODUCTS COLLECTION ====================
