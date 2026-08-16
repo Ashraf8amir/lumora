@@ -3,9 +3,10 @@ import { LoggerMiddleware } from '@/common/middlewares/logger.middleware';
 import { GlobalModule } from './global.module';
 import { AppStartupService } from './lifecycle/app-startup.service';
 import { globalProviders } from './providers';
+import { UsersModule } from '@/modules/users/users.module';
 
 @Module({
-  imports: [GlobalModule],
+  imports: [GlobalModule, UsersModule],
   providers: [...globalProviders, AppStartupService],
 })
 export class AppModule implements NestModule {
