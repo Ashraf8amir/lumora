@@ -9,9 +9,9 @@ export function createPaginationResult(
 
   return {
     pagination: {
+      total: total,
       page: page,
       limit: limit,
-      total: total,
       totalPages: totalPages,
     },
   };

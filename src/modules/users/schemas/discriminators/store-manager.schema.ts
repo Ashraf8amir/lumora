@@ -1,9 +1,11 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument } from 'mongoose';
+
 import { StoreManagerMethods } from '../../interfaces/store-manger-methods.interface';
+import { User } from '../user.schema';
 
 export type StoreManagerDocument = HydratedDocument<
-  StoreManager,
+  StoreManager & User,
   StoreManagerMethods<StoreManager>
 >;
 

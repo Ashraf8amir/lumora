@@ -1,16 +1,15 @@
 ﻿import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { Model } from 'mongoose';
 
 import { Role } from '@/common/enums/role.enum';
 
-import { CreateAdminDto } from '../dto/create/create-admin.dto';
 import { CreateCustomerDto } from '../dto/create/create-customer.dto';
-import { CreateStoreManagerDto } from '../dto/create/create-store-manager.dto';
 import { CreateTechnicianDto } from '../dto/create/create-technician.dto';
+import { CreateStoreManagerDto } from '../dto/create/create-store-manager.dto';
 import { QueryUserDto } from '../dto/query-user.dto';
 import { UpdateUserDto } from '../dto/update-user.dto';
-import { AdminDocument } from '../schemas/discriminators/admin.schema';
+
 import { CustomerDocument } from '../schemas/discriminators/customer.schema';
 import { StoreManagerDocument } from '../schemas/discriminators/store-manager.schema';
 import { TechnicianDocument } from '../schemas/discriminators/technician.schema';
@@ -30,29 +29,32 @@ export class UsersRepository {
 
     @InjectModel(Role.TECHNICIAN)
     private readonly technicianModel: Model<TechnicianDocument>,
-
-    @InjectModel(Role.ADMIN)
-    private readonly adminModel: Model<AdminDocument>,
   ) {}
 
   createCustomer(dto: CreateCustomerDto): Promise<CustomerDocument> {
-    return this.customerModel.create({ ...dto, role: Role.CUSTOMER });
+    return this.customerModel.create(dto);
   }
 
   createStoreManager(dto: CreateStoreManagerDto): Promise<StoreManagerDocument> {
-    return this.storeManagerModel.create({ ...dto, role: Role.STORE_MANAGER });
+    return this.storeManagerModel.create(dto);
   }
 
   createTechnician(dto: CreateTechnicianDto): Promise<TechnicianDocument> {
-    return this.technicianModel.create({ ...dto, role: Role.TECHNICIAN });
-  }
+    const { profile, ...baseUserData } = dto;
 
-  createAdmin(dto: CreateAdminDto): Promise<AdminDocument> {
-    return this.adminModel.create({ ...dto, role: Role.ADMIN });
+    return this.technicianModel.create({
+      ...baseUserData,
+      role: Role.TECHNICIAN,
+      profile: {
+        skills: profile?.skills ?? [],
+        certifications: profile?.certifications ?? [],
+        yearsOfExperience: profile?.yearsOfExperience ?? 0,
+        bio: profile?.bio,
+      },
+    });
   }
 
   findById(id: string): Promise<UserDocument | null> {
-    if (!Types.ObjectId.isValid(id)) return Promise.resolve(null);
     return this.userModel.findById(id).exec();
   }
 
@@ -61,8 +63,7 @@ export class UsersRepository {
   }
 
   async existsByEmail(email: string): Promise<boolean> {
-    const result = await this.userModel.exists({ email: email.toLowerCase() });
-    return result !== null;
+    return (await this.userModel.exists({ email: email.toLowerCase() })) !== null;
   }
 
   async findAll(query: QueryUserDto) {
@@ -71,12 +72,21 @@ export class UsersRepository {
     const skip = (page - 1) * limit;
 
     const filter: Record<string, unknown> = {};
+
     if (query.role) filter.role = query.role;
+
     if (typeof query.isActive === 'boolean') filter.isActive = query.isActive;
-    if (query.search) filter.$text = { $search: query.search };
+
+    const isTextSearch = Boolean(query.search?.trim());
+
+    if (isTextSearch) filter.$text = { $search: query.search!.trim() };
+
+    const projection = isTextSearch ? { score: { $meta: 'textScore' } } : {};
+    const sort: any = isTextSearch ? { score: { $meta: 'textScore' } } : { createdAt: -1 };
 
     const [items, total] = await Promise.all([
-      this.userModel.find(filter).skip(skip).limit(limit).exec(),
+      this.userModel.find(filter, projection).sort(sort).skip(skip).limit(limit).exec(),
+
       this.userModel.countDocuments(filter).exec(),
     ]);
 
@@ -84,7 +94,8 @@ export class UsersRepository {
   }
 
   updateById(id: string, dto: UpdateUserDto): Promise<UserDocument | null> {
-    if (!Types.ObjectId.isValid(id)) return Promise.resolve(null);
-    return this.userModel.findByIdAndUpdate(id, dto, { new: true }).exec();
+    return this.userModel
+      .findByIdAndUpdate(id, { $set: dto }, { new: true, runValidators: true })
+      .exec();
   }
 }
