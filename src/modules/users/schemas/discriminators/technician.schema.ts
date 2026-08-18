@@ -1,56 +1,119 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Types } from 'mongoose';
-import { User } from '../user.schema';
+import { HydratedDocument } from 'mongoose';
 
-export interface TechnicianMethods {
-  assignTicket(ticketId: Types.ObjectId): Promise<TechnicianDocument>;
-  completeTicket(ticketId: Types.ObjectId): Promise<TechnicianDocument>;
-  markUnavailable(): Promise<TechnicianDocument>;
-  markAvailable(): Promise<TechnicianDocument>;
+import { TechnicianMethods } from '../../interfaces/technician-methods.interface';
+import { TechnicianStatus } from '../../enums/technician-status.enum';
+
+export type TechnicianDocument = HydratedDocument<Technician, TechnicianMethods<Technician>>;
+
+@Schema({
+  _id: false,
+})
+export class TechnicianProfile {
+  @Prop({ type: [String], default: [], trim: true })
+  skills!: string[];
+
+  @Prop({ type: [String], default: [], trim: true })
+  certifications!: string[];
+
+  @Prop({ type: Number, min: 0, default: 0 })
+  yearsOfExperience!: number;
+
+  @Prop({ type: String, trim: true, maxlength: 1000 })
+  bio?: string;
 }
 
-export type TechnicianDocument = Technician & User & Document & TechnicianMethods;
+@Schema({
+  _id: false,
+})
+export class TechnicianStats {
+  @Prop({ type: Number, min: 0, default: 0 })
+  completedTickets!: number;
+
+  @Prop({ type: Number, min: 0, default: 0 })
+  cancelledTickets!: number;
+
+  @Prop({ type: Number, min: 0, default: 0 })
+  averageRating!: number;
+
+  @Prop({ type: Number, min: 0, default: 0 })
+  totalRatings!: number;
+}
 
 @Schema()
 export class Technician {
-  @Prop({ type: [String], default: [] })
-  skills!: string[];
+  @Prop({ type: TechnicianProfile, default: () => ({}) })
+  profile!: TechnicianProfile;
 
-  @Prop({ default: true })
+  @Prop({ default: true, index: true })
   isAvailable!: boolean;
 
-  @Prop({ type: [Types.ObjectId], ref: 'ServiceTicket', default: [] })
-  assignedTickets!: Types.ObjectId[];
-}
+  @Prop({ type: Date, default: null })
+  lastAvailableAt?: Date;
 
+  @Prop({ type: Date, default: null })
+  lastAssignedAt?: Date;
+
+  @Prop({
+    type: String,
+    enum: TechnicianStatus,
+    default: TechnicianStatus.OFFLINE,
+    index: true,
+  })
+  status!: string;
+
+  @Prop({ type: TechnicianStats, default: () => ({}) })
+  stats!: TechnicianStats;
+
+  @Prop({
+    type: { type: String, enum: ['Point'] },
+    coordinates: {
+      type: [Number],
+      validate: {
+        validator: (value: number[]) => {
+          if (value.length !== 2) return false;
+
+          const [longitude, latitude] = value;
+
+          return longitude >= -180 && longitude <= 180 && latitude >= -90 && latitude <= 90;
+        },
+        message: 'Location coordinates must be [longitude, latitude] with valid ranges',
+      },
+    },
+  })
+  location?: {
+    type: 'Point';
+    coordinates: [number, number];
+  };
+
+  @Prop({ type: Date, default: null })
+  lastLocationUpdatedAt?: Date;
+}
 export const TechnicianSchema = SchemaFactory.createForClass(Technician);
 
-TechnicianSchema.virtual('activeTicketsCount').get(function (this: TechnicianDocument) {
-  return this.assignedTickets.length;
+TechnicianSchema.index({ location: '2dsphere' });
+
+TechnicianSchema.virtual('ratingLabel').get(function (this: TechnicianDocument) {
+  if (this.stats.averageRating >= 4.5) return 'Excellent';
+
+  if (this.stats.averageRating >= 4) return 'Very Good';
+
+  if (this.stats.averageRating >= 3) return 'Good';
+
+  return 'Needs Improvement';
 });
 
-TechnicianSchema.methods.assignTicket = async function (
+TechnicianSchema.methods.setAvailability = async function (
   this: TechnicianDocument,
-  ticketId: Types.ObjectId,
+  available: boolean,
 ) {
-  this.assignedTickets.push(ticketId);
-  return this.save();
-};
+  if (this.isAvailable === available) return this;
 
-TechnicianSchema.methods.completeTicket = async function (
-  this: TechnicianDocument,
-  ticketId: Types.ObjectId,
-) {
-  this.assignedTickets = this.assignedTickets.filter((id) => !id.equals(ticketId));
-  return this.save();
-};
+  this.isAvailable = available;
 
-TechnicianSchema.methods.markUnavailable = async function (this: TechnicianDocument) {
-  this.isAvailable = false;
-  return this.save();
-};
+  if (available) this.lastAvailableAt = new Date();
 
-TechnicianSchema.methods.markAvailable = async function (this: TechnicianDocument) {
-  this.isAvailable = true;
-  return this.save();
+  await this.save();
+
+  return this;
 };

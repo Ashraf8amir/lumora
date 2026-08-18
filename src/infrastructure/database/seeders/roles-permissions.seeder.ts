@@ -1,4 +1,4 @@
-import { DEFAULT_ROLES } from '@modules/auth/constants/roles-permissions.constant';
+import { DEFAULT_ROLES } from './roles.permissions.constant';
 import { Connection } from 'mongoose';
 
 export function createRolesSeeder(connection: Connection) {
