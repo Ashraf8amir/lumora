@@ -1,14 +1,14 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument } from 'mongoose';
 
+import { Point, PointSchema } from '@/common/schemas/point.schema';
+import { User } from '../user.schema';
 import { TechnicianMethods } from '../../interfaces/technician-methods.interface';
 import { TechnicianStatus } from '../../enums/technician-status.enum';
 
-export type TechnicianDocument = HydratedDocument<Technician, TechnicianMethods<Technician>>;
+export type TechnicianDocument = HydratedDocument<Technician & User, TechnicianMethods<Technician>>;
 
-@Schema({
-  _id: false,
-})
+@Schema({ _id: false })
 export class TechnicianProfile {
   @Prop({ type: [String], default: [], trim: true })
   skills!: string[];
@@ -23,9 +23,7 @@ export class TechnicianProfile {
   bio?: string;
 }
 
-@Schema({
-  _id: false,
-})
+@Schema({ _id: false })
 export class TechnicianStats {
   @Prop({ type: Number, min: 0, default: 0 })
   completedTickets!: number;
@@ -65,26 +63,8 @@ export class Technician {
   @Prop({ type: TechnicianStats, default: () => ({}) })
   stats!: TechnicianStats;
 
-  @Prop({
-    type: { type: String, enum: ['Point'] },
-    coordinates: {
-      type: [Number],
-      validate: {
-        validator: (value: number[]) => {
-          if (value.length !== 2) return false;
-
-          const [longitude, latitude] = value;
-
-          return longitude >= -180 && longitude <= 180 && latitude >= -90 && latitude <= 90;
-        },
-        message: 'Location coordinates must be [longitude, latitude] with valid ranges',
-      },
-    },
-  })
-  location?: {
-    type: 'Point';
-    coordinates: [number, number];
-  };
+  @Prop({ type: PointSchema })
+  location?: Point;
 
   @Prop({ type: Date, default: null })
   lastLocationUpdatedAt?: Date;

@@ -1,22 +1,11 @@
-﻿import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  HttpCode,
-  HttpStatus,
-  Param,
-  Patch,
-  Post,
-  Query,
-} from '@nestjs/common';
+﻿import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 
 import { ResponseMessage } from '@/common/response';
 import { ApiCommonErrors } from '@/infrastructure/swagger/decorators/api-common-errors.decorator';
 import { ApiOkResponseWrapped } from '@/infrastructure/swagger/decorators/api-ok-response-wrapped.decorator';
+import { ParseObjectIdPipe } from '@common/pipes/parse-object-id.pipe';
 
-import { CreateAdminDto } from './dto/create/create-admin.dto';
 import { CreateCustomerDto } from './dto/create/create-customer.dto';
 import { CreateStoreManagerDto } from './dto/create/create-store-manager.dto';
 import { CreateTechnicianDto } from './dto/create/create-technician.dto';
@@ -54,14 +43,6 @@ export class UsersController {
     return this.usersService.createTechnician(dto);
   }
 
-  @Post('admins')
-  @ResponseMessage('Admin created successfully')
-  @ApiOkResponseWrapped(UserResponseDto)
-  @ApiCommonErrors(['BAD_REQUEST', 'CONFLICT'])
-  createAdmin(@Body() dto: CreateAdminDto) {
-    return this.usersService.createAdmin(dto);
-  }
-
   @Get()
   @ResponseMessage('Users retrieved successfully')
   @ApiOkResponseWrapped(UserResponseDto, { isArray: true })
@@ -73,7 +54,7 @@ export class UsersController {
   @ResponseMessage('User retrieved successfully')
   @ApiOkResponseWrapped(UserResponseDto)
   @ApiCommonErrors(['NOT_FOUND'])
-  findOne(@Param('id') id: string) {
+  findOne(@Param('id', ParseObjectIdPipe) id: string) {
     return this.usersService.findOne(id);
   }
 
@@ -81,14 +62,14 @@ export class UsersController {
   @ResponseMessage('User updated successfully')
   @ApiOkResponseWrapped(UserResponseDto)
   @ApiCommonErrors(['NOT_FOUND', 'BAD_REQUEST'])
-  update(@Param('id') id: string, @Body() dto: UpdateUserDto) {
+  update(@Param('id', ParseObjectIdPipe) id: string, @Body() dto: UpdateUserDto) {
     return this.usersService.update(id, dto);
   }
 
   @Delete(':id')
-  @HttpCode(HttpStatus.NO_CONTENT)
+  @ResponseMessage('User deleted successfully')
   @ApiCommonErrors(['NOT_FOUND'])
-  async remove(@Param('id') id: string) {
+  async remove(@Param('id', ParseObjectIdPipe) id: string) {
     await this.usersService.remove(id);
   }
 }

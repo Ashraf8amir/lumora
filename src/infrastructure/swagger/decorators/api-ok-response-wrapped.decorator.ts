@@ -1,44 +1,91 @@
 import { applyDecorators, Type } from '@nestjs/common';
 import { ApiExtraModels, ApiOkResponse, getSchemaPath } from '@nestjs/swagger';
 
+interface ApiOkResponseWrappedOptions {
+  isArray?: boolean;
+  description?: string;
+  isPaginated?: boolean;
+}
+
 /**
- * In other words, `ApiOkResponseWrapped` is merely a response description intended for Swagger,
- * not the actual implementation logic for the response itself.
+ * Decorator for documenting wrapped API responses with standardized envelope format.
+ * Automatically documents the success response structure including metadata.
  *
- * usage with single response:
+ * @param dto - The data transfer object type for the response
+ * @param options - Configuration options for the response format
  *
- *   @ApiOkResponseWrapped(ProductDto)
- *   @Get(':id')
- *   findOne() { ... }
+ * @example
+ * Single response:
+ * ```typescript
+ * @ApiOkResponseWrapped(ProductDto, { description: 'Product details' })
+ * @Get(':id')
+ * findOne(@Param('id') id: string) { }
+ * ```
  *
- * usage with array response:
- *
- *   @ApiOkResponseWrapped(ProductDto, { isArray: true })
- *   @Get()
- *   findAll() { ... }
+ * @example
+ * Array response:
+ * ```typescript
+ * @ApiOkResponseWrapped(ProductDto, { isArray: true, isPaginated: true })
+ * @Get()
+ * findAll(@Query() query: PaginationQuery) { }
+ * ```
  */
 export function ApiOkResponseWrapped<T extends Type<unknown>>(
   dto: T,
-  options?: { isArray?: boolean; description?: string },
+  options?: ApiOkResponseWrappedOptions,
 ) {
   const dataSchema = options?.isArray
     ? { type: 'array', items: { $ref: getSchemaPath(dto) } }
     : { $ref: getSchemaPath(dto) };
 
+  const defaultDescription = options?.isPaginated
+    ? 'Successful response with paginated data'
+    : options?.isArray
+      ? 'Successful response with array data'
+      : 'Successful response with single data object';
+
+  const metadataProperties = options?.isPaginated
+    ? {
+        type: 'object',
+        properties: {
+          total: { type: 'number', example: 100 },
+          page: { type: 'number', example: 1 },
+          limit: { type: 'number', example: 10 },
+          pages: { type: 'number', example: 10 },
+        },
+      }
+    : { type: 'object' };
+
   return applyDecorators(
     ApiExtraModels(dto),
     ApiOkResponse({
-      description: options?.description,
+      description: options?.description || defaultDescription,
       schema: {
         allOf: [
           {
             properties: {
-              success: { type: 'boolean', example: true },
-              statusCode: { type: 'number', example: 200 },
-              message: { type: 'string', example: 'Request successful' },
-              data: dataSchema,
+              success: {
+                type: 'boolean',
+                example: true,
+                description: 'Request success status',
+              },
+              statusCode: {
+                type: 'number',
+                example: 200,
+                description: 'HTTP status code',
+              },
+              message: {
+                type: 'string',
+                example: 'Request successful',
+                description: 'Human-readable response message',
+              },
+              data: {
+                ...dataSchema,
+                description: 'Response payload',
+              },
               metadata: {
-                type: 'object',
+                ...metadataProperties,
+                description: 'Additional metadata (e.g., pagination info)',
               },
             },
           },

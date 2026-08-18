@@ -15,6 +15,8 @@ const transform = (_doc: unknown, ret: Record<string, unknown>) => {
   delete ret._id;
   delete ret.isDeleted;
   delete ret.deletedAt;
+  delete ret.createdAt;
+  delete ret.updatedAt;
 
   return ret;
 };
@@ -87,6 +89,7 @@ export class User {
   dateOfBirth?: Date;
 
   @Prop({
+    type: String,
     trim: true,
     enum: Gender,
     default: Gender.OTHER,
