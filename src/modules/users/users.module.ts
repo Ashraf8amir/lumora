@@ -4,7 +4,6 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { Role } from '@/common/enums/role.enum';
 import { CacheModule } from '@/infrastructure/cache/cache.module';
 
-import { AdminSchema } from './schemas/discriminators/admin.schema';
 import { CustomerSchema } from './schemas//discriminators/customer.schema';
 import { StoreManagerSchema } from './schemas//discriminators/store-manager.schema';
 import { TechnicianSchema } from './schemas//discriminators/technician.schema';
@@ -24,7 +23,6 @@ import { UsersRepository } from './repositories/users.repository';
           { name: Role.CUSTOMER, schema: CustomerSchema },
           { name: Role.STORE_MANAGER, schema: StoreManagerSchema },
           { name: Role.TECHNICIAN, schema: TechnicianSchema },
-          { name: Role.ADMIN, schema: AdminSchema },
         ],
       },
     ]),

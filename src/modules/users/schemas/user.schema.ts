@@ -1,18 +1,23 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Types } from 'mongoose';
+import { HydratedDocument } from 'mongoose';
 
 import { Role } from '@/common/enums/role.enum';
-import { softDeletePlugin } from '@/infrastructure/providers/mongoose/plugins/soft-delete.plugin';
+import {
+  SoftDeleteFields,
+  softDeletePlugin,
+} from '@/infrastructure/providers/mongoose/plugins/soft-delete.plugin';
+import { Gender } from '../enums/gender.enum';
+import { UserMethods } from '../interfaces/user-methods.interface';
 
-export interface UserMethods {
-  emailVerification(): Promise<UserDocument>;
-  activate(): Promise<UserDocument>;
-  deactivate(): Promise<UserDocument>;
-  changeAvatar(url: string): Promise<UserDocument>;
-  softDelete(): Promise<UserDocument>;
-}
+export type UserDocument = HydratedDocument<User & SoftDeleteFields, UserMethods<User>>;
 
-export type UserDocument = User & Document & UserMethods;
+const transform = (_doc: unknown, ret: Record<string, unknown>) => {
+  delete ret._id;
+  delete ret.isDeleted;
+  delete ret.deletedAt;
+
+  return ret;
+};
 
 @Schema({
   timestamps: true,
@@ -22,36 +27,52 @@ export type UserDocument = User & Document & UserMethods;
 
   toJSON: {
     virtuals: true,
-    transform: (_doc, ret: Record<string, unknown>) => {
-      delete ret._id;
-      delete ret.isDeleted;
-      delete ret.deletedAt;
-      return ret;
-    },
+    transform,
+  },
+
+  toObject: {
+    virtuals: true,
+    transform,
   },
 })
 export class User {
-  _id!: Types.ObjectId;
-
-  @Prop({ required: true, trim: true, minlength: 2, maxlength: 50 })
+  @Prop({
+    required: true,
+    trim: true,
+    minlength: 2,
+    maxlength: 50,
+  })
   firstName!: string;
 
-  @Prop({ required: true, trim: true, minlength: 2, maxlength: 50 })
+  @Prop({
+    required: true,
+    trim: true,
+    minlength: 2,
+    maxlength: 50,
+  })
   lastName!: string;
 
   @Prop({
     required: true,
-    unique: true,
     lowercase: true,
     trim: true,
+    maxLength: 254,
     match: [/^[^\s@]+@[^\s@]+\.[^\s@]+$/, 'Invalid email format'],
   })
   email!: string;
 
-  @Prop({ type: String, enum: Role, required: true, default: Role.CUSTOMER })
+  @Prop({
+    type: String,
+    enum: Role,
+    required: true,
+    default: Role.CUSTOMER,
+  })
   role!: Role;
 
-  @Prop({ trim: true, match: [/^01[0-2,5]{1}[0-9]{8}$/, 'Invalid phone format'] })
+  @Prop({
+    trim: true,
+    match: [/^01[0125][0-9]{8}$/, 'Invalid phone format'],
+  })
   phone?: string;
 
   @Prop({
@@ -67,18 +88,15 @@ export class User {
 
   @Prop({
     trim: true,
-    enum: {
-      values: ['Male', 'Female', 'Other'],
-      message: '{VALUE} is an invalid gender format',
-    },
-    default: 'Other',
+    enum: Gender,
+    default: Gender.OTHER,
   })
   gender?: string;
 
-  @Prop({ default: true })
+  @Prop({ default: true, index: true })
   isActive!: boolean;
 
-  @Prop({ default: false })
+  @Prop({ default: false, index: true })
   isEmailVerified!: boolean;
 
   @Prop({ default: null })
@@ -86,14 +104,44 @@ export class User {
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
+
 UserSchema.plugin(softDeletePlugin);
 
-UserSchema.index({ role: 1, isActive: 1 });
+UserSchema.index(
+  { email: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      isDeleted: false,
+    },
+  },
+);
 
-UserSchema.index({ firstName: 'text', lastName: 'text', email: 'text' });
+UserSchema.index(
+  { phone: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      phone: { $exists: true },
+      isDeleted: false,
+    },
+  },
+);
+
+UserSchema.index({
+  role: 1,
+  isActive: 1,
+});
+
+UserSchema.index({
+  firstName: 'text',
+  lastName: 'text',
+  email: 'text',
+});
 
 UserSchema.virtual('initials').get(function (this: UserDocument) {
   if (!this.firstName || !this.lastName) return '';
+
   return `${this.firstName.charAt(0).toUpperCase()}${this.lastName.charAt(0).toUpperCase()}`;
 });
 
@@ -103,27 +151,50 @@ UserSchema.virtual('fullName').get(function (this: UserDocument) {
 
 UserSchema.virtual('age').get(function (this: UserDocument) {
   if (!this.dateOfBirth) return null;
-  const ageDifMs = Date.now() - this.dateOfBirth.getTime();
-  const ageDate = new Date(ageDifMs);
-  return Math.abs(ageDate.getUTCFullYear() - 1970);
+
+  const today = new Date();
+  const birthDate = this.dateOfBirth;
+
+  let age = today.getFullYear() - birthDate.getFullYear();
+
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+
+  return age;
 });
 
 UserSchema.methods.activate = async function (this: UserDocument) {
-  this.isActive = true;
-  return this.save();
+  if (!this.isActive) {
+    this.isActive = true;
+    await this.save();
+  }
+
+  return this;
 };
 
 UserSchema.methods.deactivate = async function (this: UserDocument) {
-  this.isActive = false;
-  return this.save();
+  if (this.isActive) {
+    this.isActive = false;
+    await this.save();
+  }
+
+  return this;
 };
 
-UserSchema.methods.emailVerification = async function (this: UserDocument) {
-  this.isEmailVerified = true;
-  return this.save();
+UserSchema.methods.verifyEmail = async function (this: UserDocument) {
+  if (!this.isEmailVerified) {
+    this.isEmailVerified = true;
+    await this.save();
+  }
+
+  return this;
 };
 
 UserSchema.methods.changeAvatar = async function (this: UserDocument, url: string) {
-  this.avatarUrl = url;
-  return this.save();
+  this.avatarUrl = url.trim();
+  await this.save();
+  return this;
 };

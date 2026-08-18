@@ -1,48 +1,37 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Types } from 'mongoose';
-import { User } from '../user.schema';
+import { HydratedDocument } from 'mongoose';
+import { StoreManagerMethods } from '../../interfaces/store-manger-methods.interface';
 
-export interface StoreManagerMethods {
-  hasPermission(permission: string): boolean;
-  grantPermission(permission: string): Promise<StoreManagerDocument>;
-  revokePermission(permission: string): Promise<StoreManagerDocument>;
-}
-
-export type StoreManagerDocument = StoreManager & User & Document & StoreManagerMethods;
+export type StoreManagerDocument = HydratedDocument<
+  StoreManager,
+  StoreManagerMethods<StoreManager>
+>;
 
 @Schema()
 export class StoreManager {
-  @Prop({ type: Types.ObjectId, ref: 'Store', required: true })
-  managedStoreId!: Types.ObjectId;
+  @Prop({ default: true, index: true })
+  isManagementEnabled!: boolean;
 
-  @Prop({ type: [String], default: [] })
-  permissions!: string[];
+  @Prop({ type: Date, default: null })
+  lastManagementActivityAt?: Date;
 }
 
 export const StoreManagerSchema = SchemaFactory.createForClass(StoreManager);
 
-StoreManagerSchema.methods.hasPermission = function (
-  this: StoreManagerDocument,
-  permission: string,
-) {
-  return this.permissions.includes(permission);
-};
-
-StoreManagerSchema.methods.grantPermission = async function (
-  this: StoreManagerDocument,
-  permission: string,
-) {
-  if (!this.permissions.includes(permission)) {
-    this.permissions.push(permission);
+StoreManagerSchema.methods.enableManagement = async function (this: StoreManagerDocument) {
+  if (!this.isManagementEnabled) {
+    this.isManagementEnabled = true;
     await this.save();
   }
+
   return this;
 };
 
-StoreManagerSchema.methods.revokePermission = async function (
-  this: StoreManagerDocument,
-  permission: string,
-) {
-  this.permissions = this.permissions.filter((p) => p !== permission);
-  return this.save();
+StoreManagerSchema.methods.disableManagement = async function (this: StoreManagerDocument) {
+  if (this.isManagementEnabled) {
+    this.isManagementEnabled = false;
+    await this.save();
+  }
+
+  return this;
 };
