@@ -91,7 +91,7 @@ export class User {
   @Prop({
     type: String,
     trim: true,
-    enum: Gender,
+    enum: Object.values(Gender),
     default: Gender.OTHER,
   })
   gender?: string;
