@@ -115,3 +115,20 @@ Build a production-ready Authentication & User Management API using NestJS with 
 | LUM-059 | Configure CI Pipeline | High     | Backlog |
 | LUM-060 | Health Check Endpoint | Medium   | Backlog |
 | LUM-061 | Monitoring & Metrics  | Medium   | Backlog |
+
+---
+
+# Sprint 11 — Advanced Authentication
+
+| ID      | Title                                  | Priority | Status  |
+| ------- | -------------------------------------- | -------- | ------- |
+| LUM-062 | Setup Auth Module Foundation           | High     | Backlog |
+| LUM-063 | Implement Access JWT Strategy          | High     | Backlog |
+| LUM-064 | Implement Refresh Token Rotation       | High     | Backlog |
+| LUM-065 | Integrate Redis Token Blacklisting     | High     | Backlog |
+| LUM-066 | Integrate Google OAuth2 Login          | High     | Backlog |
+| LUM-067 | Implement RBAC Roles and Permissions   | High     | Backlog |
+| LUM-068 | Build RBAC Guards and Decorators       | High     | Backlog |
+| LUM-069 | Implement 2FA Enrollment and Challenge | High     | Backlog |
+| LUM-070 | Implement 2FA Recovery and Reset       | Medium   | Backlog |
+| LUM-071 | Audit and Harden Auth Security Flows   | High     | Backlog |
