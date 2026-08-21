@@ -70,4 +70,46 @@ export const envValidationSchema = Joi.object({
     'number.integer': 'REDIS_DB must be an integer',
     'number.min': 'REDIS_DB must be greater than or equal to 0',
   }),
+
+  SWAGGER_ENABLE_IN_PROD: Joi.boolean().default(false).messages({
+    'boolean.base': 'SWAGGER_ENABLE_IN_PROD must be a boolean',
+  }),
+  SWAGGER_USERNAME: Joi.string()
+    .when('SWAGGER_ENABLE_IN_PROD', {
+      is: true,
+      then: Joi.required(),
+      otherwise: Joi.optional(),
+    })
+    .messages({
+      'any.required': 'SWAGGER_USERNAME is required when SWAGGER_ENABLE_IN_PROD is true',
+    }),
+  SWAGGER_PASSWORD: Joi.string()
+    .when('SWAGGER_ENABLE_IN_PROD', {
+      is: true,
+      then: Joi.required(),
+      otherwise: Joi.optional(),
+    })
+    .messages({
+      'any.required': 'SWAGGER_PASSWORD is required when SWAGGER_ENABLE_IN_PROD is true',
+    }),
+
+  JWT_ACCESS_SECRET: Joi.string().required().messages({
+    'any.required': 'JWT_ACCESS_SECRET is required',
+  }),
+  JWT_ACCESS_EXPIRATION: Joi.string().required().messages({
+    'any.required': 'JWT_ACCESS_EXPIRATION is required',
+  }),
+  JWT_REFRESH_SECRET: Joi.string().required().messages({
+    'any.required': 'JWT_REFRESH_SECRET is required',
+  }),
+  JWT_REFRESH_EXPIRATION: Joi.string().required().messages({
+    'any.required': 'JWT_REFRESH_EXPIRATION is required',
+  }),
+
+  GOOGLE_CLIENT_ID: Joi.string().required().messages({
+    'any.required': 'GOOGLE_CLIENT_ID is required',
+  }),
+  GOOGLE_CLIENT_SECRET: Joi.string().required().messages({
+    'any.required': 'GOOGLE_CLIENT_SECRET is required',
+  }),
 });

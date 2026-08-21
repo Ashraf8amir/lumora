@@ -125,7 +125,7 @@ UserSchema.index(
   {
     unique: true,
     partialFilterExpression: {
-      phone: { $exists: true },
+      phone: { $type: 'string' },
       isDeleted: false,
     },
   },
