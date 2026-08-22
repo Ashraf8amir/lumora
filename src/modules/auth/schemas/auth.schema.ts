@@ -22,24 +22,13 @@ export class Auth {
   })
   userId!: Types.ObjectId;
 
-  @Prop({
-    type: AuthCredentialsSchema,
-    required: true,
-    default: () => ({}),
-  })
+  @Prop({ type: AuthCredentialsSchema, required: true, default: () => ({}) })
   credentials!: AuthCredentials;
 
-  @Prop({
-    type: [ActiveSessionSchema],
-    default: [],
-  })
+  @Prop({ type: [ActiveSessionSchema], default: [] })
   sessions!: ActiveSession[];
 
-  @Prop({
-    type: AuthSecuritySchema,
-    required: true,
-    default: () => ({}),
-  })
+  @Prop({ type: AuthSecuritySchema, required: true, default: () => ({}) })
   security!: AuthSecurity;
 }
 

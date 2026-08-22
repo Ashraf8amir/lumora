@@ -1,57 +1,49 @@
 import { Module } from '@nestjs/common';
-import { MongooseModule } from '@nestjs/mongoose';
+import { APP_GUARD } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import { MongooseModule } from '@nestjs/mongoose';
 import { PassportModule } from '@nestjs/passport';
 
-import { UsersModule } from '../users/users.module';
+import { UsersModule } from '@/modules/users/users.module';
 
-import { Auth, AuthSchema } from './schemas/auth.schema';
+import { AuthController } from './auth.controller';
+import { AuthService } from './auth.service';
+import { JwtAccessGuard } from './guards/jwt-access.guard';
 import { AuthRepository } from './repositories/auth.repository';
-
-import { AuthService } from './services/auth.service';
-import { TokenService } from './services/auth-token.service';
-import { TwoFactorAuthService } from './services/auth-two-factor.service';
-import { GoogleAuthService } from './services/auth-google.service';
-
-import { AuthController } from './controllers/auth.controller';
-
+import { Auth, AuthSchema } from './schemas/auth.schema';
+import { AuthCredentialsService } from './services/auth-credentials.service';
+import { AuthGoogleService } from './services/auth-google.service';
+import { AuthSecurityService } from './services/auth-security.service';
+import { AuthSessionService } from './services/auth-session.service';
+import { AuthTokenService } from './services/auth-token.service';
+import { AuthTwoFactorService } from './services/auth-two-factor.service';
 import { JwtAccessStrategy } from './strategies/jwt-access.strategy';
 import { JwtRefreshStrategy } from './strategies/jwt-refresh.strategy';
-import { JwtAccessGuard } from './guards/jwt-access.guard';
-import { RolesGuard } from './guards/roles.guard';
 
 @Module({
   imports: [
-    UsersModule,
-    PassportModule.register({ defaultStrategy: 'jwt-access' }),
-    JwtModule.registerAsync({
-      imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => ({
-        secret: configService.getOrThrow<string>('JWT_ACCESS_SECRET'),
-        signOptions: {
-          expiresIn: configService.get<string>('JWT_ACCESS_EXPIRATION', '15m'),
-        },
-      }),
-      inject: [ConfigService],
-    }),
     MongooseModule.forFeature([{ name: Auth.name, schema: AuthSchema }]),
+    PassportModule,
+    JwtModule.register({}),
+    UsersModule,
   ],
   controllers: [AuthController],
   providers: [
     AuthService,
-    TokenService,
-    TwoFactorAuthService,
-    GoogleAuthService,
-
     AuthRepository,
-
+    AuthCredentialsService,
+    AuthGoogleService,
+    AuthSecurityService,
+    AuthSessionService,
+    AuthTokenService,
+    AuthTwoFactorService,
     JwtAccessStrategy,
     JwtRefreshStrategy,
-
-    JwtAccessGuard,
-    RolesGuard,
+    {
+      provide: APP_GUARD,
+      useClass: JwtAccessGuard,
+    },
   ],
-  exports: [AuthService, TokenService, JwtAccessGuard, RolesGuard],
+  exports: [AuthTokenService, AuthSessionService],
 })
 export class AuthModule {}
