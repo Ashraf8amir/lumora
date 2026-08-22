@@ -1,38 +1,18 @@
 import { Injectable } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
-
-import { Auth, AuthDocument } from '../schemas/auth.schema';
+import { Types } from 'mongoose';
+import { AuthRepository } from '../repositories/auth.repository';
 import { AuthProvider } from '../enums/auth-provider.enum';
 
 @Injectable()
 export class AuthCredentialsService {
-  constructor(
-    @InjectModel(Auth.name)
-    private readonly authModel: Model<AuthDocument>,
-  ) {}
+  constructor(private readonly authRepository: AuthRepository) {}
 
   async setPasswordHash(userId: Types.ObjectId, passwordHash: string): Promise<void> {
-    await this.authModel.updateOne(
-      { userId },
-      {
-        $set: {
-          'credentials.passwordHash': passwordHash,
-          'security.lastPasswordChangeAt': new Date(),
-        },
-      },
-    );
+    await this.authRepository.setPasswordHash(userId, passwordHash);
   }
 
   async clearPassword(userId: Types.ObjectId): Promise<void> {
-    await this.authModel.updateOne(
-      { userId },
-      {
-        $set: {
-          'credentials.passwordHash': null,
-        },
-      },
-    );
+    await this.authRepository.clearPassword(userId);
   }
 
   async setProvider(
@@ -40,29 +20,10 @@ export class AuthCredentialsService {
     provider: AuthProvider,
     providerId?: string,
   ): Promise<void> {
-    await this.authModel.updateOne(
-      { userId },
-      {
-        $set: {
-          'credentials.provider': provider,
-          'credentials.providerId': providerId ?? null,
-        },
-      },
-    );
+    await this.authRepository.setProvider(userId, provider, providerId);
   }
 
   async updatePassword(userId: Types.ObjectId, passwordHash: string): Promise<void> {
-    await this.authModel.updateOne(
-      { userId },
-      {
-        $set: {
-          'credentials.passwordHash': passwordHash,
-          'security.lastPasswordChangeAt': new Date(),
-        },
-        $inc: {
-          'security.tokenVersion': 1,
-        },
-      },
-    );
+    await this.authRepository.updatePassword(userId, passwordHash);
   }
 }

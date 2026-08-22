@@ -1,4 +1,4 @@
-import { createHash, randomBytes, randomUUID } from 'node:crypto';
+import { createHash, randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -129,7 +129,14 @@ export class AuthTokenService {
   }
 
   compareToken(rawToken: string, tokenHash: string): boolean {
-    return this.hashToken(rawToken) === tokenHash;
+    const incomingHash = Buffer.from(this.hashToken(rawToken), 'hex');
+    const storedHash = Buffer.from(tokenHash, 'hex');
+
+    if (incomingHash.length !== storedHash.length) {
+      return false;
+    }
+
+    return timingSafeEqual(incomingHash, storedHash);
   }
 
   // ===========================================================================
@@ -211,5 +218,26 @@ export class AuthTokenService {
       default:
         throw new Error(`Unsupported JWT expiration unit: ${unit}`);
     }
+  }
+
+  // ===========================================================================
+  // Helper to issue both Tokens at once
+  // ===========================================================================
+
+  async issueAuthTokens(params: {
+    userId: string;
+    role: AccessTokenPayload['role'];
+    sessionId: string;
+  }) {
+    const accessToken = this.signAccessToken(params);
+    const refreshToken = this.generateRefreshToken();
+
+    return {
+      accessToken: accessToken.token,
+      accessTokenExpiresAt: accessToken.expiresAt,
+      refreshToken: refreshToken.raw,
+      refreshTokenHash: refreshToken.hash,
+      refreshTokenExpiresAt: refreshToken.expiresAt,
+    };
   }
 }
