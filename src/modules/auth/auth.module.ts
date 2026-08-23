@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-import { APP_GUARD } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
 import { MongooseModule } from '@nestjs/mongoose';
 import { PassportModule } from '@nestjs/passport';
@@ -8,7 +7,6 @@ import { UsersModule } from '@/modules/users/users.module';
 
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
-import { JwtAccessGuard } from './guards/jwt-access.guard';
 import { AuthRepository } from './repositories/auth.repository';
 import { Auth, AuthSchema } from './schemas/auth.schema';
 import { AuthCredentialsService } from './services/auth-credentials.service';
@@ -39,10 +37,6 @@ import { JwtRefreshStrategy } from './strategies/jwt-refresh.strategy';
     AuthTwoFactorService,
     JwtAccessStrategy,
     JwtRefreshStrategy,
-    {
-      provide: APP_GUARD,
-      useClass: JwtAccessGuard,
-    },
   ],
   exports: [AuthTokenService, AuthSessionService],
 })

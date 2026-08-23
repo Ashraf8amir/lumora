@@ -22,7 +22,7 @@ import { LoginDto } from './dto/request/login.dto';
 import { RegisterDto } from './dto/request/register.dto';
 import { TwoFactorCodeDto } from './dto/request/two-factor.dto';
 import { AuthTokensResponseDto } from './dto/response/auth-tokens.response.dto';
-import { JwtRefreshGuard } from './guards/jwt-refresh.guard';
+import { RefreshTokenGuard } from './guards/jwt-refresh.guard';
 import { TwoFactorGuard } from './guards/two-factor.guard';
 import { SessionContext } from './interfaces/active-session.interface';
 import { AuthTokenService } from './services/auth-token.service';
@@ -101,7 +101,7 @@ export class AuthController {
   }
 
   @Public()
-  @UseGuards(JwtRefreshGuard)
+  @UseGuards(RefreshTokenGuard)
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   async refresh(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
