@@ -59,11 +59,13 @@ export class UsersRepository {
   }
 
   findByEmail(email: string): Promise<UserDocument | null> {
-    return this.userModel.findOne({ email: email.toLowerCase() }).exec();
+    const normalizedEmail = email.trim().toLowerCase();
+    return this.userModel.findOne({ email: normalizedEmail }).exec();
   }
 
   async existsByEmail(email: string): Promise<boolean> {
-    return (await this.userModel.exists({ email: email.toLowerCase() })) !== null;
+    const normalizedEmail = email.trim().toLowerCase();
+    return (await this.userModel.exists({ email: normalizedEmail })) !== null;
   }
 
   async findAll(query: QueryUserDto) {

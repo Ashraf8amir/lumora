@@ -17,7 +17,6 @@ export class UsersService {
   constructor(private readonly usersRepo: UsersRepository) {}
 
   async createCustomer(dto: CreateCustomerDto) {
-    await this.ensureEmailIsUnique(dto.email);
     return this.handleDuplicateKey(() => this.usersRepo.createCustomer(dto));
   }
 
@@ -105,11 +104,11 @@ export class UsersService {
     );
   }
 
-  private async ensureEmailIsUnique(email: string): Promise<void> {
+  async ensureEmailIsUnique(email: string): Promise<void> {
     const exists = await this.usersRepo.existsByEmail(email);
 
     if (exists) {
-      throw new BusinessException('Email already registered..', {
+      throw new BusinessException('Email already registered', {
         statusCode: HttpStatus.CONFLICT,
         errorCode: ErrorCode.DUPLICATE_ENTRY,
       });

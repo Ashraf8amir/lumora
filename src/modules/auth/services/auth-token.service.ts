@@ -7,8 +7,15 @@ import { JwtService } from '@nestjs/jwt';
 import { CacheService } from '@/infrastructure/cache/cache.service';
 
 import { AccessTokenPayload, MfaChallengePayload } from '../interfaces/token-payload.interface';
+import { Role } from '@/common/enums/role.enum';
 
 const ACCESS_TOKEN_BLACKLIST_PREFIX = 'auth:blacklist:access:';
+
+export interface AccessTokenResult {
+  token: string;
+  jti: string;
+  expiresAt: Date;
+}
 
 @Injectable()
 export class AuthTokenService {
@@ -22,15 +29,7 @@ export class AuthTokenService {
   // Access Token
   // ===========================================================================
 
-  signAccessToken(params: {
-    userId: string;
-    role: AccessTokenPayload['role'];
-    sessionId: string;
-  }): {
-    token: string;
-    jti: string;
-    expiresAt: Date;
-  } {
+  signAccessToken(params: { userId: string; role: Role; sessionId: string }): AccessTokenResult {
     const jti = randomUUID();
 
     const expiresInSeconds = this.parseExpiresIn(

@@ -16,7 +16,11 @@ import { AuthSessionService } from './services/auth-session.service';
 import { AuthTokenService } from './services/auth-token.service';
 import { AuthTwoFactorService } from './services/auth-two-factor.service';
 import { JwtAccessStrategy } from './strategies/jwt-access.strategy';
-import { JwtRefreshStrategy } from './strategies/jwt-refresh.strategy';
+import { RefreshTokenStrategy } from './strategies/jwt-refresh.strategy';
+import { PermissionsGuard } from './guards/permissions.guard';
+import { RolesGuard } from './guards/roles.guard';
+import { RefreshTokenGuard } from './guards/refresh.token.guard';
+import { RolesRepository } from './repositories/roles.repository';
 
 @Module({
   imports: [
@@ -29,6 +33,7 @@ import { JwtRefreshStrategy } from './strategies/jwt-refresh.strategy';
   providers: [
     AuthService,
     AuthRepository,
+    RolesRepository,
     AuthCredentialsService,
     AuthGoogleService,
     AuthSecurityService,
@@ -36,8 +41,11 @@ import { JwtRefreshStrategy } from './strategies/jwt-refresh.strategy';
     AuthTokenService,
     AuthTwoFactorService,
     JwtAccessStrategy,
-    JwtRefreshStrategy,
+    RefreshTokenStrategy,
+    RolesGuard,
+    PermissionsGuard,
+    RefreshTokenGuard,
   ],
-  exports: [AuthTokenService, AuthSessionService],
+  exports: [AuthTokenService, AuthSessionService, RolesGuard, PermissionsGuard],
 })
 export class AuthModule {}
