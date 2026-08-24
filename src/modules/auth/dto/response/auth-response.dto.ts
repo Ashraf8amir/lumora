@@ -18,6 +18,15 @@ export class AuthResponseDto {
   accessTokenExpiresAt?: Date;
 
   @ApiPropertyOptional({
+    description:
+      'Expiration date of the refresh token (only present if 2FA is not required / completed)',
+    example: '2026-08-24T21:30:00.000Z',
+  })
+  @Expose()
+  @Type(() => Date)
+  refreshTokenExpiresAt?: Date;
+
+  @ApiPropertyOptional({
     description: 'True if the user must complete 2FA verification first',
     example: false,
   })
