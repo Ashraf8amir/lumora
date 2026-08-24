@@ -236,7 +236,7 @@ export class AuthService {
       sessionId: newSessionId,
     });
 
-    const dto = new AuthTokensResponseDto({
+    const dto = new AuthResponseDto({
       accessToken: accessToken.token,
       accessTokenExpiresAt: accessToken.expiresAt,
       refreshTokenExpiresAt: newRefreshToken.expiresAt,

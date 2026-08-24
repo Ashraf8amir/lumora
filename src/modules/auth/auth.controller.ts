@@ -29,7 +29,6 @@ import { AuthTokenService } from './services/auth-token.service';
 import { ApiCommonErrors } from '@/infrastructure/swagger/decorators/api-common-errors.decorator';
 import { ApiOkResponseWrapped } from '@/infrastructure/swagger/decorators/api-ok-response-wrapped.decorator';
 import { ResponseMessage } from '@/common/response/decorators/response-message.decorator';
-import { GenerateTokensResult } from './interfaces/auth-result.interface';
 import { Environment } from '@/common/enums/environment.enum';
 
 const REFRESH_COOKIE_NAME = 'refreshToken';
@@ -216,7 +215,7 @@ export class AuthController {
     res.clearCookie(REFRESH_COOKIE_NAME, this.getRefreshCookieOptions());
   }
 
-  private respondWithTokens(payload: GenerateTokensResult, res: Response): AuthResponseDto {
+  private respondWithTokens(payload: AuthResponseDto, res: Response): AuthResponseDto {
     if (payload.rawRefreshToken) {
       this.setRefreshCookie(res, payload.rawRefreshToken, payload.refreshTokenExpiresAt);
     }
