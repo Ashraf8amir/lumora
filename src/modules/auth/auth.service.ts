@@ -1,11 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import {
-  BadRequestException,
-  ConflictException,
-  Injectable,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { Types } from 'mongoose';
 
@@ -13,7 +8,7 @@ import { UsersService } from '@/modules/users/users.service';
 
 import { LoginDto } from './dto/request/login.dto';
 import { RegisterDto } from './dto/request/register.dto';
-import { AuthTokensResponseDto } from './dto/response/auth-tokens.response.dto';
+import { AuthTokensResponseDto } from './dto/response/auth-response.dto';
 import { TwoFactorSetupResponseDto } from './dto/response/two-factor-setup.response.dto';
 import { SessionContext } from './interfaces/active-session.interface';
 import { AuthRepository } from './repositories/auth.repository';
@@ -22,8 +17,9 @@ import { AuthCredentialsService } from './services/auth-credentials.service';
 import { AuthGoogleService } from './services/auth-google.service';
 import { AuthSecurityService } from './services/auth-security.service';
 import { AuthSessionService } from './services/auth-session.service';
-import { AuthTokenService } from './services/auth-token.service';
+import { AccessTokenResult, AuthTokenService } from './services/auth-token.service';
 import { AuthTwoFactorService } from './services/auth-two-factor.service';
+import { Role } from '@/common/enums/role.enum';
 
 const BCRYPT_ROUNDS = 12;
 
@@ -40,37 +36,20 @@ export class AuthService {
     private readonly authGoogleService: AuthGoogleService,
   ) {}
 
-  // ===========================================================================
-  // Register / Login
-  // ===========================================================================
-
   async register(dto: RegisterDto, context: SessionContext): Promise<AuthTokensResponseDto> {
-    const existingUser = await this.usersService.findByEmail(dto.email);
+    await this.usersService.ensureEmailIsUnique(dto.email);
 
-    if (existingUser) {
-      throw new ConflictException('Email is already registered');
-    }
+    const createdUser = await this.usersService.createCustomer({
+      email: dto.email,
+      firstName: dto.firstName,
+      lastName: dto.lastName,
+    });
 
     const passwordHash = await bcrypt.hash(dto.password, BCRYPT_ROUNDS);
 
-    // Split fullName into firstName and lastName
-    const [firstName, ...lastNameParts] = dto.fullName.split(' ');
-    const lastName = lastNameParts.join(' ') || 'User';
+    await this.authCredentialsService.setPasswordHash(createdUser._id, passwordHash);
 
-    // Create user as a customer by default during registration
-    const createdUser = await this.usersService.createCustomer({
-      email: dto.email,
-      firstName,
-      lastName,
-      phone: '',
-      gender: 'male',
-    });
-
-    const user = createdUser as any;
-
-    await this.authCredentialsService.setPasswordHash(user._id, passwordHash);
-
-    return this.issueTokensForNewSession(user._id, user.role, context);
+    return this.issueTokensForNewSession(createdUser._id, createdUser.role, context);
   }
 
   async login(dto: LoginDto, context: SessionContext): Promise<AuthTokensResponseDto> {
@@ -329,7 +308,7 @@ export class AuthService {
 
   private async issueTokensForNewSession(
     userId: Types.ObjectId,
-    role: any,
+    role: Role,
     context: SessionContext,
   ): Promise<AuthTokensResponseDto & { rawRefreshToken?: string }> {
     const sessionId = randomUUID();
@@ -355,7 +334,7 @@ export class AuthService {
     await this.authSessionService.createSession(userId, session);
     await this.authRepository.removeExpiredSessions(userId);
 
-    const accessToken = this.authTokenService.signAccessToken({
+    const accessToken: AccessTokenResult = this.authTokenService.signAccessToken({
       userId: userId.toString(),
       role,
       sessionId,

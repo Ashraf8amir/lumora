@@ -10,7 +10,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import type { Request, Response } from 'express';
+import type { CookieOptions, Request, Response } from 'express';
 import { UAParser } from 'ua-parser-js';
 import { Types } from 'mongoose';
 
@@ -21,11 +21,16 @@ import { GoogleLoginDto } from './dto/request/google-login.dto';
 import { LoginDto } from './dto/request/login.dto';
 import { RegisterDto } from './dto/request/register.dto';
 import { TwoFactorCodeDto } from './dto/request/two-factor.dto';
-import { AuthTokensResponseDto } from './dto/response/auth-tokens.response.dto';
+import { AuthResponseDto } from './dto/response/auth-response.dto';
 import { RefreshTokenGuard } from './guards/refresh.token.guard';
 import { TwoFactorGuard } from './guards/two-factor.guard';
 import { SessionContext } from './interfaces/active-session.interface';
 import { AuthTokenService } from './services/auth-token.service';
+import { ApiCommonErrors } from '@/infrastructure/swagger/decorators/api-common-errors.decorator';
+import { ApiOkResponseWrapped } from '@/infrastructure/swagger/decorators/api-ok-response-wrapped.decorator';
+import { ResponseMessage } from '@/common/response/decorators/response-message.decorator';
+import { GenerateTokensResult } from './interfaces/auth-result.interface';
+import { Environment } from '@/common/enums/environment.enum';
 
 const REFRESH_COOKIE_NAME = 'refreshToken';
 
@@ -38,6 +43,9 @@ export class AuthController {
   ) {}
 
   @Public()
+  @ResponseMessage('User registration successful')
+  @ApiOkResponseWrapped(AuthResponseDto)
+  @ApiCommonErrors(['BAD_REQUEST', 'CONFLICT'])
   @Post('register')
   async register(
     @Body() dto: RegisterDto,
@@ -124,7 +132,7 @@ export class AuthController {
       : undefined;
 
     await this.authService.logout(new Types.ObjectId(user.userId), user.sessionId, jti);
-    res.clearCookie(REFRESH_COOKIE_NAME);
+    this.clearRefreshCookie(res);
   }
 
   @Post('logout-all')
@@ -173,8 +181,8 @@ export class AuthController {
     const result = parser.getResult();
 
     return {
-      deviceId: (req.get('x-device-id') as string) ?? req.ip ?? 'unknown-device',
-      deviceName: req.get('x-device-name') as string,
+      deviceId: (req.get('x-device-id') as string) ?? req.ip ?? 'Unknown Device',
+      deviceName: (req.get('x-device-name') as string) ?? 'Unknown Device',
       ipAddress: req.ip,
       userAgent: userAgent,
       browser: result.browser.name ?? 'Unknown',
@@ -184,23 +192,38 @@ export class AuthController {
     };
   }
 
-  private respondWithTokens(
-    result: AuthTokensResponseDto & { rawRefreshToken?: string },
-    res: Response,
-  ) {
-    if (result.rawRefreshToken) {
-      res.cookie(REFRESH_COOKIE_NAME, result.rawRefreshToken, {
-        httpOnly: true,
-        secure: this.configService.get<string>('NODE_ENV') === 'production',
-        sameSite: 'strict',
-        expires: result.refreshTokenExpiresAt,
-        path: '/auth',
-      });
+  private getRefreshCookieOptions(): CookieOptions {
+    const isProduction = this.configService.get<string>('NODE_ENV') === Environment.Production;
+    const cookieDomain = this.configService.get<string>('COOKIE_DOMAIN');
+
+    return {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: isProduction ? 'lax' : 'strict',
+      domain: cookieDomain || undefined,
+      path: '/api/v1/auth',
+    };
+  }
+
+  private setRefreshCookie(res: Response, token: string, expiresAt?: Date): void {
+    res.cookie(REFRESH_COOKIE_NAME, token, {
+      ...this.getRefreshCookieOptions(),
+      expires: expiresAt,
+    });
+  }
+
+  private clearRefreshCookie(res: Response): void {
+    res.clearCookie(REFRESH_COOKIE_NAME, this.getRefreshCookieOptions());
+  }
+
+  private respondWithTokens(payload: GenerateTokensResult, res: Response): AuthResponseDto {
+    if (payload.rawRefreshToken) {
+      this.setRefreshCookie(res, payload.rawRefreshToken, payload.refreshTokenExpiresAt);
     }
 
     return {
-      accessToken: result.accessToken,
-      accessTokenExpiresAt: result.accessTokenExpiresAt,
+      accessToken: payload.accessToken,
+      accessTokenExpiresAt: payload.accessTokenExpiresAt,
     };
   }
 }
