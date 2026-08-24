@@ -8,7 +8,7 @@ import { UsersService } from '@/modules/users/users.service';
 
 import { LoginDto } from './dto/request/login.dto';
 import { RegisterDto } from './dto/request/register.dto';
-import { AuthTokensResponseDto } from './dto/response/auth-response.dto';
+import { AuthResponseDto } from './dto/response/auth-response.dto';
 import { TwoFactorSetupResponseDto } from './dto/response/two-factor-setup.response.dto';
 import { SessionContext } from './interfaces/active-session.interface';
 import { AuthRepository } from './repositories/auth.repository';
@@ -36,7 +36,7 @@ export class AuthService {
     private readonly authGoogleService: AuthGoogleService,
   ) {}
 
-  async register(dto: RegisterDto, context: SessionContext): Promise<AuthTokensResponseDto> {
+  async register(dto: RegisterDto, context: SessionContext): Promise<AuthResponseDto> {
     await this.usersService.ensureEmailIsUnique(dto.email);
 
     const createdUser = await this.usersService.createCustomer({
@@ -52,7 +52,7 @@ export class AuthService {
     return this.issueTokensForNewSession(createdUser._id, createdUser.role, context);
   }
 
-  async login(dto: LoginDto, context: SessionContext): Promise<AuthTokensResponseDto> {
+  async login(dto: LoginDto, context: SessionContext): Promise<AuthResponseDto> {
     const user = await this.usersService.findByEmail(dto.email);
 
     if (!user) {
@@ -81,7 +81,7 @@ export class AuthService {
     if (authDoc.security?.isTwoFactorEnabled) {
       const { token } = this.authTokenService.signMfaChallengeToken(user._id.toString());
 
-      return new AuthTokensResponseDto({
+      return new AuthResponseDto({
         requiresTwoFactor: true,
         mfaToken: token,
         accessToken: '',
@@ -98,7 +98,7 @@ export class AuthService {
     code: string,
     isBackupCode: boolean,
     context: SessionContext,
-  ): Promise<AuthTokensResponseDto> {
+  ): Promise<AuthResponseDto> {
     const userId = new Types.ObjectId(mfaUserId);
     const authDoc = await this.authRepository.findSecurityInfo(userId);
 
@@ -127,7 +127,7 @@ export class AuthService {
   // Google
   // ===========================================================================
 
-  async loginWithGoogle(idToken: string, context: SessionContext): Promise<AuthTokensResponseDto> {
+  async loginWithGoogle(idToken: string, context: SessionContext): Promise<AuthResponseDto> {
     const googleUser = await this.authGoogleService.verifyGoogleToken(idToken);
 
     if (!googleUser.emailVerified) {
@@ -162,7 +162,7 @@ export class AuthService {
       this.buildSessionSkeleton(context),
     );
 
-    const dto = new AuthTokensResponseDto({
+    const dto = new AuthResponseDto({
       accessToken: result.tokens.accessToken,
       accessTokenExpiresAt: result.tokens.accessTokenExpiresAt,
       refreshTokenExpiresAt: result.tokens.refreshTokenExpiresAt,
@@ -175,7 +175,7 @@ export class AuthService {
   // Refresh / Logout
   // ===========================================================================
 
-  async refreshTokens(rawRefreshToken: string): Promise<AuthTokensResponseDto> {
+  async refreshTokens(rawRefreshToken: string): Promise<AuthResponseDto> {
     const tokenHash = this.authTokenService.hashToken(rawRefreshToken);
     const authDoc = await this.authRepository.findByRefreshTokenHash(tokenHash);
 
@@ -310,7 +310,7 @@ export class AuthService {
     userId: Types.ObjectId,
     role: Role,
     context: SessionContext,
-  ): Promise<AuthTokensResponseDto & { rawRefreshToken?: string }> {
+  ): Promise<AuthResponseDto & { rawRefreshToken?: string }> {
     const sessionId = randomUUID();
     const refreshToken = this.authTokenService.generateRefreshToken();
 
@@ -340,7 +340,7 @@ export class AuthService {
       sessionId,
     });
 
-    const dto = new AuthTokensResponseDto({
+    const dto = new AuthResponseDto({
       accessToken: accessToken.token,
       accessTokenExpiresAt: accessToken.expiresAt,
       refreshTokenExpiresAt: refreshToken.expiresAt,
