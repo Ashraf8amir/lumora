@@ -4,6 +4,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { PassportModule } from '@nestjs/passport';
 
 import { UsersModule } from '@/modules/users/users.module';
+import { CacheModule } from '@/infrastructure/cache/cache.module';
 
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
@@ -28,6 +29,7 @@ import { RolesRepository } from './repositories/roles.repository';
     PassportModule,
     JwtModule.register({}),
     UsersModule,
+    CacheModule,
   ],
   controllers: [AuthController],
   providers: [

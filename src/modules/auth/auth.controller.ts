@@ -24,12 +24,13 @@ import { TwoFactorCodeDto } from './dto/request/two-factor.dto';
 import { AuthResponseDto } from './dto/response/auth-response.dto';
 import { RefreshTokenGuard } from './guards/refresh.token.guard';
 import { TwoFactorGuard } from './guards/two-factor.guard';
-import { SessionContext } from './interfaces/active-session.interface';
+import { SessionContext } from './interfaces/session-context.interface';
 import { AuthTokenService } from './services/auth-token.service';
 import { ApiCommonErrors } from '@/infrastructure/swagger/decorators/api-common-errors.decorator';
 import { ApiOkResponseWrapped } from '@/infrastructure/swagger/decorators/api-ok-response-wrapped.decorator';
 import { ResponseMessage } from '@/common/response/decorators/response-message.decorator';
 import { Environment } from '@/common/enums/environment.enum';
+import { GenerateTokensResult } from './interfaces/auth-result.interface';
 
 const REFRESH_COOKIE_NAME = 'refreshToken';
 
@@ -50,20 +51,25 @@ export class AuthController {
     @Body() dto: RegisterDto,
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
-  ) {
-    const result = await this.authService.register(dto, this.extractSessionContext(req));
+  ): Promise<AuthResponseDto> {
+    const sessionContext = this.extractSessionContext(req);
+    const result = await this.authService.register(dto, sessionContext);
     return this.respondWithTokens(result, res);
   }
 
   @Public()
-  @Post('login')
+  @ApiCommonErrors(['BAD_REQUEST', 'UNAUTHORIZED'])
+  @ApiOkResponseWrapped(AuthResponseDto)
+  @ResponseMessage('User login successful')
   @HttpCode(HttpStatus.OK)
+  @Post('login')
   async login(
     @Body() dto: LoginDto,
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
-  ) {
-    const result = await this.authService.login(dto, this.extractSessionContext(req));
+  ): Promise<AuthResponseDto> {
+    const sessionContext = this.extractSessionContext(req);
+    const result = await this.authService.login(dto, sessionContext);
 
     if (result.requiresTwoFactor) {
       return { requiresTwoFactor: true, mfaToken: result.mfaToken };
@@ -73,9 +79,11 @@ export class AuthController {
   }
 
   @Public()
+  @ApiCommonErrors(['BAD_REQUEST', 'UNAUTHORIZED'])
+  @ApiOkResponseWrapped(AuthResponseDto)
+  @ResponseMessage('Two-factor authentication verification successful')
   @UseGuards(TwoFactorGuard)
   @Post('2fa/verify')
-  @HttpCode(HttpStatus.OK)
   async verifyTwoFactorLogin(
     @Body() dto: TwoFactorCodeDto,
     @Req() req: Request,
@@ -108,9 +116,12 @@ export class AuthController {
   }
 
   @Public()
+  @ApiCommonErrors(['UNAUTHORIZED'])
+  @ApiOkResponseWrapped(AuthResponseDto)
+  @ResponseMessage('Token refresh successful')
   @UseGuards(RefreshTokenGuard)
-  @Post('refresh')
   @HttpCode(HttpStatus.OK)
+  @Post('refresh')
   async refresh(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
     const { refreshToken } = req.user as { refreshToken: string };
 
@@ -170,10 +181,6 @@ export class AuthController {
     return { sessions: [] };
   }
 
-  // ===========================================================================
-  // Helpers
-  // ===========================================================================
-
   private extractSessionContext(req: Request): SessionContext {
     const userAgent = req.get('user-agent') ?? '';
     const parser = new UAParser(userAgent);
@@ -215,7 +222,7 @@ export class AuthController {
     res.clearCookie(REFRESH_COOKIE_NAME, this.getRefreshCookieOptions());
   }
 
-  private respondWithTokens(payload: AuthResponseDto, res: Response): AuthResponseDto {
+  private respondWithTokens(payload: GenerateTokensResult, res: Response): AuthResponseDto {
     if (payload.rawRefreshToken) {
       this.setRefreshCookie(res, payload.rawRefreshToken, payload.refreshTokenExpiresAt);
     }

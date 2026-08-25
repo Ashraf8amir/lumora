@@ -8,18 +8,18 @@ import { UsersService } from '@/modules/users/users.service';
 
 import { LoginDto } from './dto/request/login.dto';
 import { RegisterDto } from './dto/request/register.dto';
-import { AuthResponseDto } from './dto/response/auth-response.dto';
 import { TwoFactorSetupResponseDto } from './dto/response/two-factor-setup.response.dto';
-import { SessionContext } from './interfaces/active-session.interface';
+import { SessionContext } from './interfaces/session-context.interface';
 import { AuthRepository } from './repositories/auth.repository';
 import { ActiveSession } from './schemas/active-session.schema';
 import { AuthCredentialsService } from './services/auth-credentials.service';
 import { AuthGoogleService } from './services/auth-google.service';
 import { AuthSecurityService } from './services/auth-security.service';
 import { AuthSessionService } from './services/auth-session.service';
-import { AccessTokenResult, AuthTokenService } from './services/auth-token.service';
+import { AuthTokenService } from './services/auth-token.service';
 import { AuthTwoFactorService } from './services/auth-two-factor.service';
 import { Role } from '@/common/enums/role.enum';
+import { GenerateTokensResult, LoginResult } from './interfaces/auth-result.interface';
 
 const BCRYPT_ROUNDS = 12;
 
@@ -36,9 +36,7 @@ export class AuthService {
     private readonly authGoogleService: AuthGoogleService,
   ) {}
 
-  async register(dto: RegisterDto, context: SessionContext): Promise<AuthResponseDto> {
-    await this.usersService.ensureEmailIsUnique(dto.email);
-
+  async register(dto: RegisterDto, context: SessionContext): Promise<GenerateTokensResult> {
     const createdUser = await this.usersService.createCustomer({
       email: dto.email,
       firstName: dto.firstName,
@@ -52,7 +50,7 @@ export class AuthService {
     return this.issueTokensForNewSession(createdUser._id, createdUser.role, context);
   }
 
-  async login(dto: LoginDto, context: SessionContext): Promise<AuthResponseDto> {
+  async login(dto: LoginDto, context: SessionContext): Promise<LoginResult> {
     const user = await this.usersService.findByEmail(dto.email);
 
     if (!user) {
@@ -81,13 +79,10 @@ export class AuthService {
     if (authDoc.security?.isTwoFactorEnabled) {
       const { token } = this.authTokenService.signMfaChallengeToken(user._id.toString());
 
-      return new AuthResponseDto({
+      return {
         requiresTwoFactor: true,
         mfaToken: token,
-        accessToken: '',
-        accessTokenExpiresAt: new Date(0),
-        refreshTokenExpiresAt: new Date(0),
-      });
+      };
     }
 
     return this.issueTokensForNewSession(user._id, user.role, context);
@@ -98,7 +93,7 @@ export class AuthService {
     code: string,
     isBackupCode: boolean,
     context: SessionContext,
-  ): Promise<AuthResponseDto> {
+  ): Promise<GenerateTokensResult> {
     const userId = new Types.ObjectId(mfaUserId);
     const authDoc = await this.authRepository.findSecurityInfo(userId);
 
@@ -123,11 +118,7 @@ export class AuthService {
     return this.issueTokensForNewSession(user._id, user.role, context);
   }
 
-  // ===========================================================================
-  // Google
-  // ===========================================================================
-
-  async loginWithGoogle(idToken: string, context: SessionContext): Promise<AuthResponseDto> {
+  async loginWithGoogle(idToken: string, context: SessionContext): Promise<GenerateTokensResult> {
     const googleUser = await this.authGoogleService.verifyGoogleToken(idToken);
 
     if (!googleUser.emailVerified) {
@@ -162,20 +153,15 @@ export class AuthService {
       this.buildSessionSkeleton(context),
     );
 
-    const dto = new AuthResponseDto({
+    return {
       accessToken: result.tokens.accessToken,
       accessTokenExpiresAt: result.tokens.accessTokenExpiresAt,
       refreshTokenExpiresAt: result.tokens.refreshTokenExpiresAt,
-    });
-
-    return Object.assign(dto, { rawRefreshToken: result.tokens.refreshToken });
+      // rawRefreshToken: result.tokens.rawRefreshToken,
+    };
   }
 
-  // ===========================================================================
-  // Refresh / Logout
-  // ===========================================================================
-
-  async refreshTokens(rawRefreshToken: string): Promise<AuthResponseDto> {
+  async refreshTokens(rawRefreshToken: string): Promise<GenerateTokensResult> {
     const tokenHash = this.authTokenService.hashToken(rawRefreshToken);
     const authDoc = await this.authRepository.findByRefreshTokenHash(tokenHash);
 
@@ -236,13 +222,12 @@ export class AuthService {
       sessionId: newSessionId,
     });
 
-    const dto = new AuthResponseDto({
+    return {
       accessToken: accessToken.token,
       accessTokenExpiresAt: accessToken.expiresAt,
       refreshTokenExpiresAt: newRefreshToken.expiresAt,
-    });
-
-    return Object.assign(dto, { rawRefreshToken: newRefreshToken.raw });
+      rawRefreshToken: newRefreshToken.raw,
+    };
   }
 
   async logout(userId: Types.ObjectId, sessionId: string, accessTokenJti?: string): Promise<void> {
@@ -259,10 +244,6 @@ export class AuthService {
   async logoutAll(userId: Types.ObjectId): Promise<void> {
     await this.authSessionService.revokeAllSessions(userId);
   }
-
-  // ===========================================================================
-  // Two-Factor Management (لليوزر بعد ما يكون logged in بالفعل)
-  // ===========================================================================
 
   async setupTwoFactor(
     userId: Types.ObjectId,
@@ -283,10 +264,6 @@ export class AuthService {
   async disableTwoFactor(userId: Types.ObjectId, code: string): Promise<void> {
     await this.authTwoFactorService.disableTwoFactor(userId, code);
   }
-
-  // ===========================================================================
-  // Helpers
-  // ===========================================================================
 
   private buildSessionSkeleton(
     context: SessionContext,
@@ -310,7 +287,7 @@ export class AuthService {
     userId: Types.ObjectId,
     role: Role,
     context: SessionContext,
-  ): Promise<AuthResponseDto & { rawRefreshToken?: string }> {
+  ): Promise<GenerateTokensResult> {
     const sessionId = randomUUID();
     const refreshToken = this.authTokenService.generateRefreshToken();
 
@@ -332,20 +309,18 @@ export class AuthService {
     };
 
     await this.authSessionService.createSession(userId, session);
-    await this.authRepository.removeExpiredSessions(userId);
 
-    const accessToken: AccessTokenResult = this.authTokenService.signAccessToken({
+    const accessToken = this.authTokenService.signAccessToken({
       userId: userId.toString(),
       role,
       sessionId,
     });
 
-    const dto = new AuthResponseDto({
+    return {
       accessToken: accessToken.token,
       accessTokenExpiresAt: accessToken.expiresAt,
       refreshTokenExpiresAt: refreshToken.expiresAt,
-    });
-
-    return Object.assign(dto, { rawRefreshToken: refreshToken.raw });
+      rawRefreshToken: refreshToken.raw,
+    };
   }
 }
