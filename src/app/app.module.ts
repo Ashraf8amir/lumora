@@ -4,9 +4,10 @@ import { GlobalModule } from './global.module';
 import { AppStartupService } from './lifecycle/app-startup.service';
 import { globalProviders } from './providers';
 import { UsersModule } from '@/modules/users/users.module';
+import { AuthModule } from '@/modules/auth/auth.module';
 
 @Module({
-  imports: [GlobalModule, UsersModule],
+  imports: [GlobalModule, UsersModule, AuthModule],
   providers: [...globalProviders, AppStartupService],
 })
 export class AppModule implements NestModule {

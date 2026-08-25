@@ -17,6 +17,7 @@ export class UsersService {
   constructor(private readonly usersRepo: UsersRepository) {}
 
   async createCustomer(dto: CreateCustomerDto) {
+    await this.ensureEmailIsUnique(dto.email);
     return this.handleDuplicateKey(() => this.usersRepo.createCustomer(dto));
   }
 

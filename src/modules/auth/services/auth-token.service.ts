@@ -48,7 +48,6 @@ export class AuthTokenService {
     const token = this.jwtService.sign(payload, {
       secret: this.configService.getOrThrow<string>('jwt.access.secret'),
       expiresIn: this.configService.getOrThrow<string>('jwt.access.expiration'),
-      jwtid: jti,
     } as any);
 
     return {
@@ -110,11 +109,11 @@ export class AuthTokenService {
     const raw = randomBytes(64).toString('base64url');
 
     const hash = this.hashToken(raw);
-
-    const expiresAt = new Date(
-      Date.now() +
-        this.configService.getOrThrow<number>('jwt.refresh.expiration') * 24 * 60 * 60 * 1000,
+    const refreshExpiresInSeconds = this.parseExpiresIn(
+      this.configService.getOrThrow<string>('jwt.refresh.expiration'),
     );
+
+    const expiresAt = new Date(Date.now() + refreshExpiresInSeconds * 1000);
 
     return {
       raw,
@@ -138,10 +137,6 @@ export class AuthTokenService {
     return timingSafeEqual(incomingHash, storedHash);
   }
 
-  // ===========================================================================
-  // MFA Challenge Token
-  // ===========================================================================
-
   signMfaChallengeToken(userId: string): { token: string; jti: string } {
     const jti = randomUUID();
 
@@ -154,7 +149,6 @@ export class AuthTokenService {
     const token = this.jwtService.sign(payload, {
       secret: this.configService.getOrThrow<string>('jwt.mfaChallenge.secret'),
       expiresIn: this.configService.getOrThrow<string>('jwt.mfaChallenge.expiration'),
-      jwtid: jti,
     } as any);
 
     return {

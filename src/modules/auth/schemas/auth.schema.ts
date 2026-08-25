@@ -48,5 +48,3 @@ AuthSchema.index(
     },
   },
 );
-
-AuthSchema.index({ 'sessions.sessionId': 1 });

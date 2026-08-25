@@ -26,6 +26,7 @@ export class AuthRepository {
           'security.lastPasswordChangeAt': new Date(),
         },
       },
+      { upsert: true, setDefaultsOnInsert: true },
     );
   }
 
@@ -53,6 +54,7 @@ export class AuthRepository {
           'credentials.providerId': providerId ?? null,
         },
       },
+      { upsert: true, setDefaultsOnInsert: true },
     );
   }
 
@@ -68,13 +70,14 @@ export class AuthRepository {
           'security.tokenVersion': 1,
         },
       },
+      { upsert: true, setDefaultsOnInsert: true },
     );
   }
 
   async findSecurityInfo(userId: Types.ObjectId): Promise<Partial<Auth> | null> {
     return this.authModel
       .findOne({ userId })
-      .select('security +security.twoFactorSecret +security.twoFactorBackupCodes')
+      .select('+security.twoFactorSecret +security.twoFactorBackupCodes')
       .lean();
   }
 
