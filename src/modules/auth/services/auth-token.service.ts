@@ -25,10 +25,6 @@ export class AuthTokenService {
     private readonly configService: ConfigService,
   ) {}
 
-  // ===========================================================================
-  // Access Token
-  // ===========================================================================
-
   signAccessToken(params: { userId: string; role: Role; sessionId: string }): AccessTokenResult {
     const jti = randomUUID();
 
@@ -101,10 +97,6 @@ export class AuthTokenService {
     return value !== null && value !== undefined;
   }
 
-  // ===========================================================================
-  // Refresh Token
-  // ===========================================================================
-
   generateRefreshToken(): { raw: string; hash: string; expiresAt: Date } {
     const raw = randomBytes(64).toString('base64url');
 
@@ -126,9 +118,9 @@ export class AuthTokenService {
     return createHash('sha256').update(token, 'utf8').digest('hex');
   }
 
-  compareToken(rawToken: string, tokenHash: string): boolean {
-    const incomingHash = Buffer.from(this.hashToken(rawToken), 'hex');
-    const storedHash = Buffer.from(tokenHash, 'hex');
+  compareToken(incomingTokenHash: string, storedTokenHash: string): boolean {
+    const incomingHash = Buffer.from(incomingTokenHash, 'hex');
+    const storedHash = Buffer.from(storedTokenHash, 'hex');
 
     if (incomingHash.length !== storedHash.length) {
       return false;
@@ -177,10 +169,6 @@ export class AuthTokenService {
     }
   }
 
-  // ===========================================================================
-  // Helpers
-  // ===========================================================================
-
   private parseExpiresIn(expiresIn: string | number): number {
     if (typeof expiresIn === 'number') {
       return expiresIn;
@@ -212,10 +200,6 @@ export class AuthTokenService {
         throw new Error(`Unsupported JWT expiration unit: ${unit}`);
     }
   }
-
-  // ===========================================================================
-  // Helper to issue both Tokens at once
-  // ===========================================================================
 
   async issueAuthTokens(params: {
     userId: string;

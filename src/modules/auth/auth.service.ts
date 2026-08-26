@@ -169,9 +169,8 @@ export class AuthService {
       throw new UnauthorizedException('Invalid refresh token');
     }
 
-    const session = authDoc.sessions.find(
-      (s) =>
-        this.authTokenService.compareToken(rawRefreshToken, s.refreshTokenHash) && !s.isRevoked,
+    const session = authDoc.sessions.find((s) =>
+      this.authTokenService.compareToken(tokenHash, s.refreshTokenHash),
     );
 
     if (!session) {
@@ -179,36 +178,24 @@ export class AuthService {
     }
 
     if (session.expiresAt <= new Date()) {
-      throw new UnauthorizedException('Refresh token has expired');
+      await this.authRepository.deleteSessionFamily(authDoc.userId, session.familyId);
+      throw new UnauthorizedException(
+        'Refresh token has expired and Security alert: Refresh token reuse detected. All sessions revoked.',
+      );
     }
 
-    // إعادة استخدام refresh token اتسحب قبل كده = احتمال سرقة → نلغي الـ family كله
-    // (الشرط ده مش هيتحقق أبدًا هنا لأن السيشن لسه isRevoked=false، ده حماية إضافية
-    // في حالة عندك rotation queue بتتأخر — سيبها كتعليق توضيحي).
-
-    await this.authRepository.revokeSession(authDoc.userId, session.sessionId);
-
-    const newSessionId = randomUUID();
     const newRefreshToken = this.authTokenService.generateRefreshToken();
 
-    const rotatedSession: ActiveSession = {
-      sessionId: newSessionId,
-      refreshTokenHash: newRefreshToken.hash,
-      familyId: session.familyId,
-      deviceId: session.deviceId,
-      deviceName: session.deviceName,
-      ipAddress: session.ipAddress,
-      userAgent: session.userAgent,
-      browser: session.browser,
-      os: session.os,
-      deviceType: session.deviceType,
-      isPrimary: session.isPrimary,
-      expiresAt: newRefreshToken.expiresAt,
-      createdAt: new Date(),
-      isRevoked: false,
-    };
+    const isUpdated = await this.authRepository.updateSessionToken(
+      authDoc.userId,
+      session.sessionId,
+      newRefreshToken.hash,
+      newRefreshToken.expiresAt,
+    );
 
-    await this.authSessionService.createSession(authDoc.userId, rotatedSession);
+    if (!isUpdated) {
+      throw new UnauthorizedException('Failed to rotate session. Please login again.');
+    }
 
     const user = await this.usersService.findOne(authDoc.userId.toString());
 
@@ -219,7 +206,7 @@ export class AuthService {
     const accessToken = this.authTokenService.signAccessToken({
       userId: user._id.toString(),
       role: user.role,
-      sessionId: newSessionId,
+      sessionId: session.sessionId,
     });
 
     return {
@@ -231,7 +218,7 @@ export class AuthService {
   }
 
   async logout(userId: Types.ObjectId, sessionId: string, accessTokenJti?: string): Promise<void> {
-    await this.authSessionService.revokeSession(userId, sessionId);
+    await this.authSessionService.deleteSession(userId, sessionId);
 
     if (accessTokenJti) {
       await this.authTokenService.blacklistAccessToken(
@@ -242,7 +229,7 @@ export class AuthService {
   }
 
   async logoutAll(userId: Types.ObjectId): Promise<void> {
-    await this.authSessionService.revokeAllSessions(userId);
+    await this.authSessionService.deleteAllSessions(userId);
   }
 
   async setupTwoFactor(
@@ -288,6 +275,10 @@ export class AuthService {
     role: Role,
     context: SessionContext,
   ): Promise<GenerateTokensResult> {
+    if (context.deviceId) {
+      await this.authRepository.deleteSessionByDeviceId(userId, context.deviceId);
+    }
+
     const sessionId = randomUUID();
     const refreshToken = this.authTokenService.generateRefreshToken();
 
@@ -305,7 +296,6 @@ export class AuthService {
       isPrimary: context.isPrimary ?? false,
       expiresAt: refreshToken.expiresAt,
       createdAt: new Date(),
-      isRevoked: false,
     };
 
     await this.authSessionService.createSession(userId, session);

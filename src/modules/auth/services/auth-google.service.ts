@@ -87,7 +87,6 @@ export class AuthGoogleService {
       ...sessionData,
       sessionId,
       createdAt: new Date(),
-      isRevoked: false,
     };
 
     await this.authSessionService.createSession(userId, fullSession);

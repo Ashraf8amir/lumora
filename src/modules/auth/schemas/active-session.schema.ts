@@ -41,11 +41,11 @@ export class ActiveSession {
   @Prop({ default: Date.now })
   createdAt!: Date;
 
-  @Prop({ default: false })
-  isRevoked!: boolean;
+  // @Prop({ default: false })
+  // isRevoked!: boolean;
 
-  @Prop({ type: Date, default: null })
-  revokedAt?: Date | null;
+  // @Prop({ type: Date, default: null })
+  // revokedAt?: Date | null;
 }
 
 export const ActiveSessionSchema = SchemaFactory.createForClass(ActiveSession);

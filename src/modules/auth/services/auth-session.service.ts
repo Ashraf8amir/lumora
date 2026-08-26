@@ -15,16 +15,16 @@ export class AuthSessionService {
     }
   }
 
-  async revokeSession(userId: Types.ObjectId, sessionId: string): Promise<boolean> {
-    return this.authRepository.revokeSession(userId, sessionId);
+  async deleteSession(userId: Types.ObjectId, sessionId: string): Promise<boolean> {
+    return this.authRepository.deleteSession(userId, sessionId);
   }
 
-  async revokeAllSessions(userId: Types.ObjectId): Promise<boolean> {
-    return this.authRepository.revokeAllSessions(userId);
+  async deleteAllSessions(userId: Types.ObjectId): Promise<boolean> {
+    return this.authRepository.deleteAllSessions(userId);
   }
 
-  async revokeSessionFamily(userId: Types.ObjectId, familyId: string): Promise<boolean> {
-    return this.authRepository.revokeSessionFamily(userId, familyId);
+  async deleteSessionFamily(userId: Types.ObjectId, familyId: string): Promise<boolean> {
+    return this.authRepository.deleteSessionFamily(userId, familyId);
   }
 
   async removeExpiredSessions(userId: Types.ObjectId): Promise<void> {
@@ -33,6 +33,6 @@ export class AuthSessionService {
 
   getActiveSessionsCount(auth: Auth): number {
     const now = new Date();
-    return auth.sessions.filter((session) => !session.isRevoked && session.expiresAt > now).length;
+    return auth.sessions.filter((session) => session.expiresAt > now).length;
   }
 }
