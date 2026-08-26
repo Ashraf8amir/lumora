@@ -31,6 +31,7 @@ import { ApiOkResponseWrapped } from '@/infrastructure/swagger/decorators/api-ok
 import { ResponseMessage } from '@/common/response/decorators/response-message.decorator';
 import { Environment } from '@/common/enums/environment.enum';
 import { GenerateTokensResult } from './interfaces/auth-result.interface';
+import { createHash } from 'node:crypto';
 
 const REFRESH_COOKIE_NAME = 'refreshToken';
 
@@ -129,19 +130,15 @@ export class AuthController {
     return this.respondWithTokens(result, res);
   }
 
+  @ApiCommonErrors(['UNAUTHORIZED'])
   @Post('logout')
   @HttpCode(HttpStatus.NO_CONTENT)
   async logout(
-    @CurrentUser() user: { userId: string; sessionId: string },
-    @Req() req: Request,
+    @CurrentUser() user: { userId: string; sessionId: string; jti?: string },
     @Res({ passthrough: true }) res: Response,
   ) {
-    const authHeader = req.get('Authorization')?.replace('Bearer ', '').trim();
-    const jti = authHeader
-      ? (await this.authTokenService.verifyAccessToken(authHeader)).jti
-      : undefined;
+    await this.authService.logout(new Types.ObjectId(user.userId), user.sessionId, user.jti);
 
-    await this.authService.logout(new Types.ObjectId(user.userId), user.sessionId, jti);
     this.clearRefreshCookie(res);
   }
 
@@ -186,8 +183,12 @@ export class AuthController {
     const parser = new UAParser(userAgent);
     const result = parser.getResult();
 
+    const FallbackDeviceId = createHash('sha256')
+      .update(`${userAgent}-${result.browser.name}-${result.os.name}-${result.device.type}`)
+      .digest('hex');
+
     return {
-      deviceId: (req.get('x-device-id') as string) ?? req.ip ?? 'Unknown Device',
+      deviceId: (req.get('x-device-id') as string) || FallbackDeviceId,
       deviceName: (req.get('x-device-name') as string) ?? 'Unknown Device',
       ipAddress: req.ip,
       userAgent: userAgent,

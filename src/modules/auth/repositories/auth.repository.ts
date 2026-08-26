@@ -105,6 +105,7 @@ export class AuthRepository {
           },
         },
       ],
+      { updatePipeline: true },
     );
   }
 
@@ -163,17 +164,22 @@ export class AuthRepository {
     return result.matchedCount > 0;
   }
 
-  async revokeSession(userId: Types.ObjectId, sessionId: string): Promise<boolean> {
+  async updateSessionToken(
+    userId: Types.ObjectId,
+    sessionId: string,
+    newRefreshTokenHash: string,
+    newExpiresAt: Date,
+  ): Promise<boolean> {
     const result = await this.authModel.updateOne(
       {
         userId,
         'sessions.sessionId': sessionId,
-        'sessions.isRevoked': false,
       },
       {
         $set: {
-          'sessions.$.isRevoked': true,
-          'sessions.$.revokedAt': new Date(),
+          'sessions.$.refreshTokenHash': newRefreshTokenHash,
+          'sessions.$.expiresAt': newExpiresAt,
+          'sessions.$.updatedAt': new Date(),
         },
       },
     );
@@ -181,47 +187,53 @@ export class AuthRepository {
     return result.matchedCount > 0;
   }
 
-  async revokeAllSessions(userId: Types.ObjectId): Promise<boolean> {
+  async deleteSession(userId: Types.ObjectId, sessionId: string): Promise<boolean> {
     const result = await this.authModel.updateOne(
-      { userId, 'sessions.isRevoked': false },
+      { userId },
       {
-        $set: {
-          'sessions.$[session].isRevoked': true,
-          'sessions.$[session].revokedAt': new Date(),
+        $pull: {
+          sessions: { sessionId },
         },
+      },
+    );
+
+    return result.modifiedCount > 0;
+  }
+
+  async deleteSessionByDeviceId(userId: Types.ObjectId, deviceId: string): Promise<void> {
+    await this.authModel.updateOne(
+      { userId },
+      {
+        $pull: {
+          sessions: { deviceId },
+        },
+      },
+    );
+  }
+
+  async deleteAllSessions(userId: Types.ObjectId): Promise<boolean> {
+    const result = await this.authModel.updateOne(
+      { userId },
+      {
+        $set: { sessions: [] },
         $inc: { 'security.tokenVersion': 1 },
       },
-      {
-        arrayFilters: [{ 'session.isRevoked': false }],
-      },
     );
-    return result.matchedCount > 0;
+
+    return result.modifiedCount > 0;
   }
 
-  async revokeSessionFamily(userId: Types.ObjectId, familyId: string): Promise<boolean> {
+  async deleteSessionFamily(userId: Types.ObjectId, familyId: string): Promise<boolean> {
     const result = await this.authModel.updateOne(
+      { userId },
       {
-        userId,
-        'sessions.familyId': familyId,
-        'sessions.isRevoked': false,
-      },
-      {
-        $set: {
-          'sessions.$[session].isRevoked': true,
-          'sessions.$[session].revokedAt': new Date(),
+        $pull: {
+          sessions: { familyId },
         },
-      },
-      {
-        arrayFilters: [
-          {
-            'session.familyId': familyId,
-            'session.isRevoked': false,
-          },
-        ],
       },
     );
 
-    return result.matchedCount > 0;
+    return result.modifiedCount > 0;
   }
 
   async removeExpiredSessions(userId: Types.ObjectId): Promise<void> {
@@ -243,7 +255,6 @@ export class AuthRepository {
         sessions: {
           $elemMatch: {
             refreshTokenHash,
-            isRevoked: false,
             expiresAt: { $gt: now },
           },
         },
