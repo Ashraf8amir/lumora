@@ -1,7 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Types } from 'mongoose';
 import { AuthRepository } from '../repositories/auth.repository';
-import { Auth } from '../schemas/auth.schema';
 import { ActiveSession } from '../schemas/active-session.schema';
 
 @Injectable()
@@ -31,8 +30,22 @@ export class AuthSessionService {
     await this.authRepository.removeExpiredSessions(userId);
   }
 
-  getActiveSessionsCount(auth: Auth): number {
+  async getActiveSessions(userId: Types.ObjectId, currentSessionId: string) {
+    const sessions = await this.authRepository.findSessionsByUserId(userId);
     const now = new Date();
-    return auth.sessions.filter((session) => session.expiresAt > now).length;
+
+    return sessions
+      .filter((session) => session.expiresAt > now)
+      .map((session) => ({
+        sessionId: session.sessionId,
+        deviceName: session.deviceName,
+        browser: session.browser,
+        os: session.os,
+        deviceType: session.deviceType,
+        ipAddress: session.ipAddress,
+        createdAt: session.createdAt,
+        expiresAt: session.expiresAt,
+        isCurrent: session.sessionId === currentSessionId,
+      }));
   }
 }

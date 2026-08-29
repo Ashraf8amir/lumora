@@ -261,4 +261,10 @@ export class AuthRepository {
       })
       .select('+sessions.refreshTokenHash');
   }
+
+  async findSessionsByUserId(userId: Types.ObjectId | string): Promise<ActiveSession[]> {
+    const authDoc = await this.authModel.findOne({ userId }).select('sessions').lean();
+
+    return authDoc?.sessions ?? [];
+  }
 }

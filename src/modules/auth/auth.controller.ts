@@ -25,7 +25,6 @@ import { AuthResponseDto } from './dto/response/auth-response.dto';
 import { RefreshTokenGuard } from './guards/refresh.token.guard';
 import { TwoFactorGuard } from './guards/two-factor.guard';
 import { SessionContext } from './interfaces/session-context.interface';
-import { AuthTokenService } from './services/auth-token.service';
 import { ApiCommonErrors } from '@/infrastructure/swagger/decorators/api-common-errors.decorator';
 import { ApiOkResponseWrapped } from '@/infrastructure/swagger/decorators/api-ok-response-wrapped.decorator';
 import { ResponseMessage } from '@/common/response/decorators/response-message.decorator';
@@ -39,7 +38,6 @@ const REFRESH_COOKIE_NAME = 'refreshToken';
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
-    private readonly authTokenService: AuthTokenService,
     private readonly configService: ConfigService,
   ) {}
 
@@ -138,10 +136,10 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     await this.authService.logout(new Types.ObjectId(user.userId), user.sessionId, user.jti);
-
     this.clearRefreshCookie(res);
   }
 
+  @ApiCommonErrors(['UNAUTHORIZED'])
   @Post('logout-all')
   @HttpCode(HttpStatus.NO_CONTENT)
   async logoutAll(
@@ -173,9 +171,17 @@ export class AuthController {
     await this.authService.disableTwoFactor(new Types.ObjectId(userId), dto.code);
   }
 
+  @ApiCommonErrors(['UNAUTHORIZED'])
+  @ResponseMessage('Active sessions retrieved successfully')
+  @HttpCode(HttpStatus.OK)
   @Get('sessions')
-  async getSessions(@CurrentUser('userId') _userId: string) {
-    return { sessions: [] };
+  async getSessions(@CurrentUser() user: { userId: string; sessionId: string }) {
+    const sessions = await this.authService.getActiveSessions(
+      new Types.ObjectId(user.userId),
+      user.sessionId,
+    );
+
+    return sessions;
   }
 
   private extractSessionContext(req: Request): SessionContext {
@@ -206,7 +212,7 @@ export class AuthController {
     return {
       httpOnly: true,
       secure: isProduction,
-      sameSite: isProduction ? 'lax' : 'strict',
+      sameSite: isProduction ? 'none' : 'lax',
       domain: cookieDomain || undefined,
       path: '/api/v1/auth',
     };

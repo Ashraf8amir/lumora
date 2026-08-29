@@ -252,6 +252,10 @@ export class AuthService {
     await this.authTwoFactorService.disableTwoFactor(userId, code);
   }
 
+  async getActiveSessions(userId: Types.ObjectId, currentSessionId: string) {
+    return this.authSessionService.getActiveSessions(userId, currentSessionId);
+  }
+
   private buildSessionSkeleton(
     context: SessionContext,
   ): Omit<ActiveSession, 'sessionId' | 'createdAt' | 'isRevoked'> {
