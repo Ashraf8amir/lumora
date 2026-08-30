@@ -42,4 +42,8 @@ export class CacheKeys {
   static dashboardStats(): string {
     return `dashboard:stats`;
   }
+
+  static twoFactorSetup(userId: string): string {
+    return `2fa:setup:${userId}`;
+  }
 }

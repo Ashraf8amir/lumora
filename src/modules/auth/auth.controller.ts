@@ -25,13 +25,13 @@ import { AuthResponseDto } from './dto/response/auth-response.dto';
 import { RefreshTokenGuard } from './guards/refresh.token.guard';
 import { TwoFactorGuard } from './guards/two-factor.guard';
 import { SessionContext } from './interfaces/session-context.interface';
-import { AuthTokenService } from './services/auth-token.service';
 import { ApiCommonErrors } from '@/infrastructure/swagger/decorators/api-common-errors.decorator';
 import { ApiOkResponseWrapped } from '@/infrastructure/swagger/decorators/api-ok-response-wrapped.decorator';
 import { ResponseMessage } from '@/common/response/decorators/response-message.decorator';
 import { Environment } from '@/common/enums/environment.enum';
 import { GenerateTokensResult } from './interfaces/auth-result.interface';
 import { createHash } from 'node:crypto';
+import { TwoFactorSetupResponseDto } from './dto/response/two-factor-setup.response.dto';
 
 const REFRESH_COOKIE_NAME = 'refreshToken';
 
@@ -39,7 +39,6 @@ const REFRESH_COOKIE_NAME = 'refreshToken';
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
-    private readonly authTokenService: AuthTokenService,
     private readonly configService: ConfigService,
   ) {}
 
@@ -89,9 +88,10 @@ export class AuthController {
     @Body() dto: TwoFactorCodeDto,
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
+    @CurrentUser('userId') userId: Types.ObjectId,
   ) {
     const result = await this.authService.verifyTwoFactorLogin(
-      (req as any).mfaUserId,
+      new Types.ObjectId(userId),
       dto.code,
       dto.isBackupCode ?? false,
       this.extractSessionContext(req),
@@ -138,10 +138,10 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     await this.authService.logout(new Types.ObjectId(user.userId), user.sessionId, user.jti);
-
     this.clearRefreshCookie(res);
   }
 
+  @ApiCommonErrors(['UNAUTHORIZED'])
   @Post('logout-all')
   @HttpCode(HttpStatus.NO_CONTENT)
   async logoutAll(
@@ -152,30 +152,47 @@ export class AuthController {
     res.clearCookie(REFRESH_COOKIE_NAME);
   }
 
+  @ApiCommonErrors(['UNAUTHORIZED'])
+  @ResponseMessage('Two-factor authentication setup initiated successfully')
+  @ApiOkResponseWrapped(TwoFactorSetupResponseDto)
   @Post('2fa/setup')
   @HttpCode(HttpStatus.OK)
-  async setupTwoFactor(@CurrentUser() user: { userId: string }) {
-    return this.authService.setupTwoFactor(new Types.ObjectId(user.userId), (user as any).email);
+  async setupTwoFactor(@CurrentUser('userId') userId: Types.ObjectId) {
+    return this.authService.setupTwoFactor(new Types.ObjectId(userId));
   }
 
+  @ApiCommonErrors(['UNAUTHORIZED'])
+  @ResponseMessage('Two-factor authentication enabled successfully')
   @Post('2fa/enable')
   @HttpCode(HttpStatus.OK)
   async enableTwoFactor(
-    @CurrentUser('userId') userId: string,
-    @Body() dto: TwoFactorCodeDto & { secret: string },
+    @CurrentUser('userId') userId: Types.ObjectId,
+    @Body() dto: TwoFactorCodeDto,
   ) {
-    return this.authService.enableTwoFactor(new Types.ObjectId(userId), dto.secret, dto.code);
+    return this.authService.enableTwoFactor(new Types.ObjectId(userId), dto.code);
   }
 
+  @ApiCommonErrors(['UNAUTHORIZED'])
   @Post('2fa/disable')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async disableTwoFactor(@CurrentUser('userId') userId: string, @Body() dto: TwoFactorCodeDto) {
+  async disableTwoFactor(
+    @CurrentUser('userId') userId: Types.ObjectId,
+    @Body() dto: TwoFactorCodeDto,
+  ) {
     await this.authService.disableTwoFactor(new Types.ObjectId(userId), dto.code);
   }
 
+  @ApiCommonErrors(['UNAUTHORIZED'])
+  @ResponseMessage('Active sessions retrieved successfully')
+  @HttpCode(HttpStatus.OK)
   @Get('sessions')
-  async getSessions(@CurrentUser('userId') _userId: string) {
-    return { sessions: [] };
+  async getSessions(@CurrentUser() user: { userId: string; sessionId: string }) {
+    const sessions = await this.authService.getActiveSessions(
+      new Types.ObjectId(user.userId),
+      user.sessionId,
+    );
+
+    return sessions;
   }
 
   private extractSessionContext(req: Request): SessionContext {
@@ -206,7 +223,7 @@ export class AuthController {
     return {
       httpOnly: true,
       secure: isProduction,
-      sameSite: isProduction ? 'lax' : 'strict',
+      sameSite: isProduction ? 'none' : 'lax',
       domain: cookieDomain || undefined,
       path: '/api/v1/auth',
     };

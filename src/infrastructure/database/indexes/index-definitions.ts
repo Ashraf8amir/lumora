@@ -1,9 +1,9 @@
-import { IndexSpecification, CreateIndexesOptions } from 'mongodb';
+import { mongo } from 'mongoose';
 
 export interface IndexDefinition {
   collection: string;
-  spec: IndexSpecification;
-  options?: CreateIndexesOptions;
+  spec: mongo.IndexSpecification;
+  options?: mongo.CreateIndexesOptions;
 }
 
 export const INDEX_DEFINITIONS: IndexDefinition[] = [

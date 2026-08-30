@@ -135,14 +135,14 @@ export class AuthRepository {
     isEnabled: boolean,
     secret: string | null,
     backupCodes: string[],
-  ): Promise<void> {
+  ) {
     await this.authModel.updateOne(
       { userId },
       {
         $set: {
           'security.isTwoFactorEnabled': isEnabled,
           'security.twoFactorBackupCodes': backupCodes,
-          'security.twoFactorSecret': secret ?? null,
+          'security.twoFactorSecret': secret,
         },
       },
     );
@@ -260,5 +260,11 @@ export class AuthRepository {
         },
       })
       .select('+sessions.refreshTokenHash');
+  }
+
+  async findSessionsByUserId(userId: Types.ObjectId | string): Promise<ActiveSession[]> {
+    const authDoc = await this.authModel.findOne({ userId }).select('sessions').lean();
+
+    return authDoc?.sessions ?? [];
   }
 }

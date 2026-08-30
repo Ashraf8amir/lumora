@@ -12,7 +12,10 @@ export class LoggerMiddleware implements NestMiddleware {
     const { method, originalUrl } = req;
     const start = Date.now();
 
-    res.setHeader('x-request-id', this.cls.getId());
+    const requestId = this.cls?.getId?.();
+    if (requestId) {
+      res.setHeader('x-request-id', requestId);
+    }
 
     res.on('finish', () => {
       const { statusCode } = res;

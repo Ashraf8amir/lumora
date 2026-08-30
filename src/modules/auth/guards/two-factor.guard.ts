@@ -15,7 +15,10 @@ export class TwoFactorGuard implements CanActivate {
     }
 
     const payload = this.authTokenService.verifyMfaChallengeToken(mfaToken);
-    request.mfaUserId = payload.sub;
+    request.user = {
+      userId: payload.sub,
+      authType: 'mfa',
+    };
 
     return true;
   }

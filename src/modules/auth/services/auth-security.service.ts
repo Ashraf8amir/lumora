@@ -41,11 +41,7 @@ export class AuthSecurityService {
     return auth.security?.tokenVersion ?? 0;
   }
 
-  async enableTwoFactor(
-    userId: Types.ObjectId,
-    secret: string,
-    backupCodes: string[],
-  ): Promise<void> {
+  async enableTwoFactor(userId: Types.ObjectId, secret: string, backupCodes: string[]) {
     await this.authRepository.updateTwoFactor(userId, true, secret, backupCodes);
   }
 
