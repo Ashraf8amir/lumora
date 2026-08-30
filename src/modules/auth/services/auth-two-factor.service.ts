@@ -7,28 +7,60 @@ import { Types } from 'mongoose';
 
 import { AuthRepository } from '../repositories/auth.repository';
 import { AuthSecurityService } from './auth-security.service';
+import { UsersService } from '@/modules/users/users.service';
+import { CacheService } from '@/infrastructure/cache/cache.service';
+import { CacheKeys } from '@/infrastructure/cache/cache.keys';
+import { CACHE_TTL } from '@/infrastructure/cache/cache.constants';
+
+interface PendingTwoFactorSetup {
+  secret: string;
+}
 
 @Injectable()
 export class AuthTwoFactorService {
+  private readonly encryptionKey: Buffer;
+
   constructor(
     private readonly configService: ConfigService,
+    private readonly usersService: UsersService,
+    private readonly cacheService: CacheService,
+
     private readonly authRepository: AuthRepository,
     private readonly authSecurityService: AuthSecurityService,
   ) {
     authenticator.options = { window: 1 };
-  }
 
-  async generateTwoFactorSecret(userId: Types.ObjectId, userEmail: string) {
-    const auth = await this.authRepository.findSecurityInfo(userId);
-    if (!auth) {
-      throw new BadRequestException('User auth details not found');
+    const encryptionKey = this.configService.get<string>('jwt.mfaChallenge.encryptionKey');
+
+    if (!encryptionKey) {
+      throw new Error('TWO_FACTOR_ENCRYPTION_KEY is not configured');
     }
 
-    const secret = authenticator.generateSecret();
-    const appName = this.configService.get<string>('APP_NAME', 'MyApp');
+    this.encryptionKey = Buffer.from(encryptionKey, 'base64');
+  }
 
-    const otpauthUrl = authenticator.keyuri(userEmail, appName, secret);
+  async generateTwoFactorSecret(userId: Types.ObjectId) {
+    const user = await this.usersService.findOne(userId.toString());
+
+    const secret = authenticator.generateSecret();
+
+    const appName = this.configService.get<string>('app.appName', 'MyApp');
+
+    const otpauthUrl = authenticator.keyuri(user.email, appName, secret);
+
     const qrCodeImageDataUrl = await QRCode.toDataURL(otpauthUrl);
+
+    const encryptedSecret = this.encryptSecret(secret);
+
+    const cacheKey = CacheKeys.twoFactorSetup(userId.toString());
+
+    await this.cacheService.set(
+      cacheKey,
+      {
+        secret: encryptedSecret,
+      },
+      CACHE_TTL.TWO_FACTOR_SETUP,
+    );
 
     return {
       secret,
@@ -36,16 +68,36 @@ export class AuthTwoFactorService {
     };
   }
 
-  async enableTwoFactor(userId: Types.ObjectId, secret: string, code: string) {
+  async enableTwoFactor(userId: Types.ObjectId, code: string) {
+    const cacheKey = CacheKeys.twoFactorSetup(userId.toString());
+
+    const pendingSetup = await this.cacheService.get<PendingTwoFactorSetup>(cacheKey);
+
+    if (!pendingSetup?.secret) {
+      throw new BadRequestException('2FA setup has expired or was not initialized');
+    }
+
+    let secret: string;
+
+    try {
+      secret = this.decryptSecret(pendingSetup.secret);
+    } catch {
+      throw new BadRequestException('Invalid 2FA setup data');
+    }
+
     const isValid = this.verifyCode(secret, code);
+
     if (!isValid) {
       throw new BadRequestException('Invalid 2FA code provided');
     }
 
     const plainBackupCodes = this.generateBackupCodes(8);
-    const hashedBackupCodes = plainBackupCodes.map((code) => this.hashCode(code));
 
-    await this.authSecurityService.enableTwoFactor(userId, secret, hashedBackupCodes);
+    const hashedBackupCodes = plainBackupCodes.map((backupCode) => this.hashCode(backupCode));
+
+    await this.authSecurityService.enableTwoFactor(userId, pendingSetup.secret, hashedBackupCodes);
+
+    await this.cacheService.del(cacheKey);
 
     return {
       backupCodes: plainBackupCodes,
@@ -68,7 +120,8 @@ export class AuthTwoFactorService {
   }
 
   verifyCode(secret: string, code: string): boolean {
-    return authenticator.verify({ token: code, secret });
+    const decryptedSecret = this.decryptSecret(secret);
+    return authenticator.verify({ token: code, secret: decryptedSecret });
   }
 
   async verifyAndConsumeBackupCode(userId: Types.ObjectId, code: string): Promise<boolean> {
@@ -108,5 +161,41 @@ export class AuthTwoFactorService {
 
   private hashCode(code: string): string {
     return crypto.createHash('sha256').update(code).digest('hex');
+  }
+
+  private encryptSecret(secret: string): string {
+    const iv = crypto.randomBytes(12);
+
+    const cipher = crypto.createCipheriv('aes-256-gcm', this.encryptionKey, iv);
+
+    const encrypted = Buffer.concat([cipher.update(secret, 'utf8'), cipher.final()]);
+
+    const authTag = cipher.getAuthTag();
+
+    return [iv.toString('base64'), authTag.toString('base64'), encrypted.toString('base64')].join(
+      '.',
+    );
+  }
+
+  private decryptSecret(encryptedSecret: string): string {
+    const [ivBase64, authTagBase64, encryptedBase64] = encryptedSecret.split('.');
+
+    if (!ivBase64 || !authTagBase64 || !encryptedBase64) {
+      throw new Error('Invalid encrypted secret format');
+    }
+
+    const iv = Buffer.from(ivBase64, 'base64');
+
+    const authTag = Buffer.from(authTagBase64, 'base64');
+
+    const encrypted = Buffer.from(encryptedBase64, 'base64');
+
+    const decipher = crypto.createDecipheriv('aes-256-gcm', this.encryptionKey, iv);
+
+    decipher.setAuthTag(authTag);
+
+    const decrypted = Buffer.concat([decipher.update(encrypted), decipher.final()]);
+
+    return decrypted.toString('utf8');
   }
 }

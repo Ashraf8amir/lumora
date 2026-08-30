@@ -89,14 +89,12 @@ export class AuthService {
   }
 
   async verifyTwoFactorLogin(
-    mfaUserId: string,
+    userId: Types.ObjectId,
     code: string,
     isBackupCode: boolean,
     context: SessionContext,
   ): Promise<GenerateTokensResult> {
-    const userId = new Types.ObjectId(mfaUserId);
     const authDoc = await this.authRepository.findSecurityInfo(userId);
-
     if (!authDoc?.security?.isTwoFactorEnabled) {
       throw new BadRequestException('2FA is not enabled for this account');
     }
@@ -157,7 +155,6 @@ export class AuthService {
       accessToken: result.tokens.accessToken,
       accessTokenExpiresAt: result.tokens.accessTokenExpiresAt,
       refreshTokenExpiresAt: result.tokens.refreshTokenExpiresAt,
-      // rawRefreshToken: result.tokens.rawRefreshToken,
     };
   }
 
@@ -232,20 +229,14 @@ export class AuthService {
     await this.authSessionService.deleteAllSessions(userId);
   }
 
-  async setupTwoFactor(
-    userId: Types.ObjectId,
-    userEmail: string,
-  ): Promise<TwoFactorSetupResponseDto> {
-    const { secret, qrCodeImageDataUrl } = await this.authTwoFactorService.generateTwoFactorSecret(
-      userId,
-      userEmail,
-    );
+  async setupTwoFactor(userId: Types.ObjectId): Promise<TwoFactorSetupResponseDto> {
+    const result = await this.authTwoFactorService.generateTwoFactorSecret(userId);
 
-    return new TwoFactorSetupResponseDto({ secret, qrCodeImageDataUrl });
+    return new TwoFactorSetupResponseDto(result);
   }
 
-  async enableTwoFactor(userId: Types.ObjectId, secret: string, code: string) {
-    return this.authTwoFactorService.enableTwoFactor(userId, secret, code);
+  async enableTwoFactor(userId: Types.ObjectId, code: string) {
+    return this.authTwoFactorService.enableTwoFactor(userId, code);
   }
 
   async disableTwoFactor(userId: Types.ObjectId, code: string): Promise<void> {
@@ -269,8 +260,8 @@ export class AuthService {
       os: context.os ?? 'Unknown',
       deviceType: context.deviceType ?? 'Unknown',
       isPrimary: context.isPrimary ?? false,
-      refreshTokenHash: '', // هيتظبط تحت قبل ما يتحفظ
-      expiresAt: new Date(0), // هيتظبط تحت قبل ما يتحفظ
+      refreshTokenHash: '',
+      expiresAt: new Date(0),
     };
   }
 

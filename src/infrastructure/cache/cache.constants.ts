@@ -5,6 +5,9 @@ export const CACHE_TTL = {
   SETTINGS: 60 * 60 * 12,
   USER_PROFILE: 60 * 15,
   DASHBOARD_STATS: 60 * 5,
+
   OTP: 60 * 5,
+  TWO_FACTOR_SETUP: 60 * 10,
+
   REFRESH_TOKEN: 60 * 60 * 24 * 30,
 } as const;

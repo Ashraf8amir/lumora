@@ -45,6 +45,7 @@ export default () => ({
     mfaChallenge: {
       secret: process.env.JWT_MFA_CHALLENGE_SECRET,
       expiration: process.env.JWT_MFA_CHALLENGE_EXPIRATION || '5m',
+      encryptionKey: process.env.TWO_FACTOR_ENCRYPTION_KEY,
     },
   },
 

@@ -31,6 +31,7 @@ import { ResponseMessage } from '@/common/response/decorators/response-message.d
 import { Environment } from '@/common/enums/environment.enum';
 import { GenerateTokensResult } from './interfaces/auth-result.interface';
 import { createHash } from 'node:crypto';
+import { TwoFactorSetupResponseDto } from './dto/response/two-factor-setup.response.dto';
 
 const REFRESH_COOKIE_NAME = 'refreshToken';
 
@@ -87,9 +88,10 @@ export class AuthController {
     @Body() dto: TwoFactorCodeDto,
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
+    @CurrentUser('userId') userId: Types.ObjectId,
   ) {
     const result = await this.authService.verifyTwoFactorLogin(
-      (req as any).mfaUserId,
+      new Types.ObjectId(userId),
       dto.code,
       dto.isBackupCode ?? false,
       this.extractSessionContext(req),
@@ -150,24 +152,33 @@ export class AuthController {
     res.clearCookie(REFRESH_COOKIE_NAME);
   }
 
+  @ApiCommonErrors(['UNAUTHORIZED'])
+  @ResponseMessage('Two-factor authentication setup initiated successfully')
+  @ApiOkResponseWrapped(TwoFactorSetupResponseDto)
   @Post('2fa/setup')
   @HttpCode(HttpStatus.OK)
-  async setupTwoFactor(@CurrentUser() user: { userId: string }) {
-    return this.authService.setupTwoFactor(new Types.ObjectId(user.userId), (user as any).email);
+  async setupTwoFactor(@CurrentUser('userId') userId: Types.ObjectId) {
+    return this.authService.setupTwoFactor(new Types.ObjectId(userId));
   }
 
+  @ApiCommonErrors(['UNAUTHORIZED'])
+  @ResponseMessage('Two-factor authentication enabled successfully')
   @Post('2fa/enable')
   @HttpCode(HttpStatus.OK)
   async enableTwoFactor(
-    @CurrentUser('userId') userId: string,
-    @Body() dto: TwoFactorCodeDto & { secret: string },
+    @CurrentUser('userId') userId: Types.ObjectId,
+    @Body() dto: TwoFactorCodeDto,
   ) {
-    return this.authService.enableTwoFactor(new Types.ObjectId(userId), dto.secret, dto.code);
+    return this.authService.enableTwoFactor(new Types.ObjectId(userId), dto.code);
   }
 
+  @ApiCommonErrors(['UNAUTHORIZED'])
   @Post('2fa/disable')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async disableTwoFactor(@CurrentUser('userId') userId: string, @Body() dto: TwoFactorCodeDto) {
+  async disableTwoFactor(
+    @CurrentUser('userId') userId: Types.ObjectId,
+    @Body() dto: TwoFactorCodeDto,
+  ) {
     await this.authService.disableTwoFactor(new Types.ObjectId(userId), dto.code);
   }
 
