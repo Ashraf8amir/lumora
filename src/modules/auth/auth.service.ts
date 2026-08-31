@@ -20,6 +20,8 @@ import { AuthTokenService } from './services/auth-token.service';
 import { AuthTwoFactorService } from './services/auth-two-factor.service';
 import { Role } from '@/common/enums/role.enum';
 import { GenerateTokensResult, LoginResult } from './interfaces/auth-result.interface';
+import { GoogleIdentity, GoogleAuthenticatedUser } from './interfaces/google.interface';
+import { AuthProvider } from './enums/auth-provider.enum';
 
 const BCRYPT_ROUNDS = 12;
 
@@ -116,46 +118,30 @@ export class AuthService {
     return this.issueTokensForNewSession(user._id, user.role, context);
   }
 
-  async loginWithGoogle(idToken: string, context: SessionContext): Promise<GenerateTokensResult> {
-    const googleUser = await this.authGoogleService.verifyGoogleToken(idToken);
+  async loginWithGoogle(idToken: string, context: SessionContext): Promise<LoginResult> {
+    const googleIdentity = await this.authGoogleService.verifyGoogleToken(idToken);
 
-    if (!googleUser.emailVerified) {
-      throw new BadRequestException('Google email is not verified');
-    }
+    const user = await this.findOrCreateGoogleUser(googleIdentity);
 
-    let user = await this.usersService.findByEmail(googleUser.email);
-
-    if (!user) {
-      const [firstName, ...lastNameParts] = (googleUser.name ?? googleUser.email).split(' ');
-      const lastName = lastNameParts.join(' ') || 'User';
-
-      const createdUser = await this.usersService.createCustomer({
-        email: googleUser.email,
-        firstName,
-        lastName,
-        phone: '',
-        gender: 'male',
-      });
-
-      user = createdUser as any;
-
-      if (!user) {
-        throw new BadRequestException('Failed to create user');
-      }
-    }
-
-    const result = await this.authGoogleService.loginWithGoogle(
-      user._id,
-      user.role,
-      idToken,
-      this.buildSessionSkeleton(context),
+    await this.authCredentialsService.setProvider(
+      user.userId,
+      AuthProvider.GOOGLE,
+      googleIdentity.googleId,
     );
 
-    return {
-      accessToken: result.tokens.accessToken,
-      accessTokenExpiresAt: result.tokens.accessTokenExpiresAt,
-      refreshTokenExpiresAt: result.tokens.refreshTokenExpiresAt,
-    };
+    const security = await this.authRepository.findSecurityInfo(user.userId);
+    const isTwoFactorEnabled = security?.security?.isTwoFactorEnabled === true;
+
+    if (isTwoFactorEnabled) {
+      const { token } = this.authTokenService.signMfaChallengeToken(user.userId.toString());
+
+      return {
+        requiresTwoFactor: true,
+        mfaToken: token,
+      };
+    }
+
+    return this.issueTokensForNewSession(user.userId, user.role, context);
   }
 
   async refreshTokens(rawRefreshToken: string): Promise<GenerateTokensResult> {
@@ -247,21 +233,37 @@ export class AuthService {
     return this.authSessionService.getActiveSessions(userId, currentSessionId);
   }
 
-  private buildSessionSkeleton(
-    context: SessionContext,
-  ): Omit<ActiveSession, 'sessionId' | 'createdAt' | 'isRevoked'> {
+  private async findOrCreateGoogleUser(
+    googleIdentity: GoogleIdentity,
+  ): Promise<GoogleAuthenticatedUser> {
+    let user = await this.usersService.findByEmail(googleIdentity.email);
+
+    if (user) {
+      if (!user.isEmailVerified) {
+        user = await this.usersService.update(user._id.toString(), {
+          isEmailVerified: true,
+        });
+      }
+
+      return { userId: user._id, role: user.role };
+    }
+
+    const [firstName, ...lastNameParts] = (googleIdentity.name ?? googleIdentity.email)
+      .trim()
+      .split(/\s+/);
+
+    const lastName = lastNameParts.join(' ') || 'User';
+
+    const createdUser = await this.usersService.createCustomer({
+      email: googleIdentity.email,
+      firstName,
+      lastName,
+      isEmailVerified: true,
+    });
+
     return {
-      familyId: randomUUID(),
-      deviceId: context.deviceId,
-      deviceName: context.deviceName,
-      ipAddress: context.ipAddress,
-      userAgent: context.userAgent ?? null,
-      browser: context.browser ?? 'Unknown',
-      os: context.os ?? 'Unknown',
-      deviceType: context.deviceType ?? 'Unknown',
-      isPrimary: context.isPrimary ?? false,
-      refreshTokenHash: '',
-      expiresAt: new Date(0),
+      userId: createdUser._id,
+      role: createdUser.role,
     };
   }
 

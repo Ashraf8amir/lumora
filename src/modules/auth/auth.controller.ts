@@ -101,17 +101,22 @@ export class AuthController {
   }
 
   @Public()
+  @ApiCommonErrors(['BAD_REQUEST', 'UNAUTHORIZED'])
+  @ApiOkResponseWrapped(AuthResponseDto)
+  @ResponseMessage('Google login successful')
   @Post('google')
   @HttpCode(HttpStatus.OK)
   async loginWithGoogle(
     @Body() dto: GoogleLoginDto,
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
-  ) {
-    const result = await this.authService.loginWithGoogle(
-      dto.idToken,
-      this.extractSessionContext(req),
-    );
+  ): Promise<AuthResponseDto> {
+    const sessionContext = this.extractSessionContext(req);
+    const result = await this.authService.loginWithGoogle(dto.idToken, sessionContext);
+
+    if (result.requiresTwoFactor) {
+      return { requiresTwoFactor: true, mfaToken: result.mfaToken };
+    }
 
     return this.respondWithTokens(result, res);
   }
