@@ -8,17 +8,6 @@ export class AuthSecurityService {
 
   constructor(private readonly authRepository: AuthRepository) {}
 
-  async isLocked(userId: Types.ObjectId): Promise<boolean> {
-    const auth = await this.authRepository.findSecurityInfo(userId);
-
-    if (!auth) {
-      throw new NotFoundException('Auth credentials not found');
-    }
-
-    const lockUntil = auth.security?.lockUntil;
-    return !!(lockUntil && lockUntil > new Date());
-  }
-
   async recordFailedLogin(userId: Types.ObjectId): Promise<void> {
     await this.authRepository.recordFailedLogin(userId, this.LOCK_DURATION_MS);
   }
