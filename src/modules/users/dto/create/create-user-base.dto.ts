@@ -8,6 +8,7 @@ import {
   MaxLength,
   IsPhoneNumber,
   IsDate,
+  IsBoolean,
 } from 'class-validator';
 
 export class CreateUserBaseDto {
@@ -47,4 +48,9 @@ export class CreateUserBaseDto {
   @IsString()
   @ApiProperty()
   avatarUrl?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  @ApiProperty()
+  isEmailVerified?: boolean;
 }

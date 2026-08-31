@@ -22,6 +22,7 @@ import { PermissionsGuard } from './guards/permissions.guard';
 import { RolesGuard } from './guards/roles.guard';
 import { RefreshTokenGuard } from './guards/refresh.token.guard';
 import { RolesRepository } from './repositories/roles.repository';
+import { OAuth2Client } from 'google-auth-library';
 
 @Module({
   imports: [
@@ -47,6 +48,10 @@ import { RolesRepository } from './repositories/roles.repository';
     RolesGuard,
     PermissionsGuard,
     RefreshTokenGuard,
+    {
+      provide: OAuth2Client,
+      useFactory: () => new OAuth2Client(),
+    },
   ],
   exports: [AuthTokenService, AuthSessionService, RolesGuard, PermissionsGuard],
 })
