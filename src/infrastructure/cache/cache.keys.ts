@@ -46,4 +46,16 @@ export class CacheKeys {
   static twoFactorSetup(userId: string): string {
     return `2fa:setup:${userId}`;
   }
+
+  static accessTokenBlacklist(jti: string): string {
+    return `auth:blacklist:access:${jti}`;
+  }
+
+  static authFailedAttempts(userId: string): string {
+    return `auth:failed_attempts:${userId}`;
+  }
+
+  static authLock(userId: string): string {
+    return `auth:lock:${userId}`;
+  }
 }

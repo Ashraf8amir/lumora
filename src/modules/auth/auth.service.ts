@@ -59,12 +59,15 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const authDoc = await this.authRepository.findByUserId(user._id);
-
-    const lockUntil = authDoc?.security?.lockUntil;
-    if (lockUntil && lockUntil > new Date()) {
-      throw new UnauthorizedException('Account is temporarily locked. Try again later');
+    const remainingLockTime = await this.authSecurityService.getLockTtl(user._id);
+    if (remainingLockTime > 0) {
+      const minutes = Math.ceil(remainingLockTime / 60);
+      throw new UnauthorizedException(
+        `Account is temporarily locked. Try again in ${minutes} minute(s)`,
+      );
     }
+
+    const authDoc = await this.authRepository.findByUserId(user._id);
 
     if (!authDoc?.credentials?.passwordHash) {
       throw new UnauthorizedException('Invalid credentials');

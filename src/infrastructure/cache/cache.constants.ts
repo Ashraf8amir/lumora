@@ -10,4 +10,7 @@ export const CACHE_TTL = {
   TWO_FACTOR_SETUP: 60 * 10,
 
   REFRESH_TOKEN: 60 * 60 * 24 * 30,
+
+  FAILED_ATTEMPTS_WINDOW: 60 * 15,
+  ACCOUNT_LOCK: 60 * 15,
 } as const;
