@@ -10,23 +10,23 @@ export class AuthSecurity {
   @Prop({ type: Number, default: 0 })
   failedLoginAttempts!: number;
 
-  @Prop({ type: Date, default: null })
-  lockUntil?: Date | null;
+  @Prop({ type: Date })
+  lockUntil?: Date;
 
-  @Prop({ type: SecurityTokenSchema, default: () => ({}) })
-  passwordReset!: SecurityToken;
+  @Prop({ type: SecurityTokenSchema, required: false })
+  passwordReset?: SecurityToken;
 
-  @Prop({ type: SecurityTokenSchema, default: () => ({}) })
-  emailVerification!: SecurityToken;
+  @Prop({ type: SecurityTokenSchema, required: false })
+  emailVerification?: SecurityToken;
 
   @Prop({ type: Boolean, default: false })
   isTwoFactorEnabled!: boolean;
 
-  @Prop({ type: String, select: false, default: null })
+  @Prop({ type: String, select: false })
   twoFactorSecret?: string | null;
 
-  @Prop({ type: [String], select: false, default: [] })
-  twoFactorBackupCodes!: string[];
+  @Prop({ type: [String], select: false, default: undefined })
+  twoFactorBackupCodes?: string[];
 
   @Prop({ type: Date, default: null })
   lastPasswordChangeAt?: Date | null;

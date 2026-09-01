@@ -59,8 +59,12 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    if (await this.authSecurityService.isLocked(user._id)) {
-      throw new UnauthorizedException('Account is temporarily locked. Try again later');
+    const remainingLockTime = await this.authSecurityService.getLockTtl(user._id);
+    if (remainingLockTime > 0) {
+      const minutes = Math.ceil(remainingLockTime / 60);
+      throw new UnauthorizedException(
+        `Account is temporarily locked. Try again in ${minutes} minute(s)`,
+      );
     }
 
     const authDoc = await this.authRepository.findByUserId(user._id);
@@ -242,6 +246,7 @@ export class AuthService {
       if (!user.isEmailVerified) {
         user = await this.usersService.update(user._id.toString(), {
           isEmailVerified: true,
+          avatarUrl: googleIdentity.picture,
         });
       }
 
@@ -259,6 +264,7 @@ export class AuthService {
       firstName,
       lastName,
       isEmailVerified: true,
+      avatarUrl: googleIdentity.picture,
     });
 
     return {

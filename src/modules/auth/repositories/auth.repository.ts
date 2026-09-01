@@ -23,7 +23,8 @@ export class AuthRepository {
       {
         $set: {
           'credentials.passwordHash': passwordHash,
-          'security.lastPasswordChangeAt': new Date(),
+          'credentials.provider': AuthProvider.LOCAL,
+          'credentials.providerId': null,
         },
       },
       { upsert: true, setDefaultsOnInsert: true },
@@ -53,6 +54,9 @@ export class AuthRepository {
           'credentials.provider': provider,
           'credentials.providerId': providerId ?? null,
         },
+        $setOnInsert: {
+          'credentials.passwordHash': null,
+        },
       },
       { upsert: true, setDefaultsOnInsert: true },
     );
@@ -70,7 +74,6 @@ export class AuthRepository {
           'security.tokenVersion': 1,
         },
       },
-      { upsert: true, setDefaultsOnInsert: true },
     );
   }
 
@@ -87,17 +90,34 @@ export class AuthRepository {
     await this.authModel.updateOne(
       {
         userId,
-        $or: [{ 'security.lockUntil': null }, { 'security.lockUntil': { $lte: now } }],
+        $or: [
+          { 'security.lockUntil': { $exists: false } },
+          { 'security.lockUntil': null },
+          { 'security.lockUntil': { $lte: now } },
+        ],
       },
       [
         {
           $set: {
             'security.failedLoginAttempts': {
-              $add: ['$security.failedLoginAttempts', 1],
+              $cond: {
+                if: {
+                  $and: [
+                    { $ne: ['$security.lockUntil', null] },
+                    { $lte: ['$security.lockUntil', now] },
+                  ],
+                },
+                then: 1,
+                else: { $add: [{ $ifNull: ['$security.failedLoginAttempts', 0] }, 1] },
+              },
             },
+          },
+        },
+        {
+          $set: {
             'security.lockUntil': {
               $cond: {
-                if: { $gte: ['$security.failedLoginAttempts', 4] },
+                if: { $gte: ['$security.failedLoginAttempts', 5] },
                 then: new Date(now.getTime() + lockDurationMs),
                 else: null,
               },
@@ -105,7 +125,6 @@ export class AuthRepository {
           },
         },
       ],
-      { updatePipeline: true },
     );
   }
 
@@ -115,7 +134,9 @@ export class AuthRepository {
       {
         $set: {
           'security.failedLoginAttempts': 0,
-          'security.lockUntil': null,
+        },
+        $unset: {
+          'security.lockUntil': 1,
         },
       },
     );
