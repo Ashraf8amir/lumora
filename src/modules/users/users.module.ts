@@ -11,6 +11,7 @@ import { User, UserSchema } from './schemas/user.schema';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
 import { UsersRepository } from './repositories/users.repository';
+import { UserCreatedConsumer } from './consumers/user-created.consumer';
 
 @Module({
   imports: [
@@ -28,7 +29,7 @@ import { UsersRepository } from './repositories/users.repository';
     ]),
   ],
   controllers: [UsersController],
-  providers: [UsersService, UsersRepository],
+  providers: [UsersService, UsersRepository, UserCreatedConsumer],
   exports: [UsersService, UsersRepository],
 })
 export class UsersModule {}

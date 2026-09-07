@@ -6,6 +6,7 @@ import { v4 as uuid } from 'uuid';
 import { DatabaseModule } from '@/infrastructure/providers/mongoose/database.module';
 import { RedisModule } from '@/infrastructure/providers/redis/redis.module';
 import { ConfigurationModule } from '@config/configuration.module';
+import { RabbitMqInfrastructureModule } from '@/infrastructure/rabbitmq/rabbitmq.module';
 
 @Global()
 @Module({
@@ -13,6 +14,7 @@ import { ConfigurationModule } from '@config/configuration.module';
     ConfigurationModule,
     DatabaseModule,
     RedisModule,
+    RabbitMqInfrastructureModule,
     ClsModule.forRoot({
       global: true,
       middleware: {
