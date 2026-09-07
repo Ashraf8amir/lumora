@@ -1,15 +1,14 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { RabbitMQModule, RabbitMQConfig } from '@golevelup/nestjs-rabbitmq';
-import { RABBITMQ_EXCHANGES, RABBITMQ_QUEUES, RABBITMQ_ROUTING_KEYS } from './rabbitmq.constants';
+import { RABBITMQ_EXCHANGES, RABBITMQ_QUEUES } from './rabbitmq.constants';
+import { ROUTING_KEYS } from '../../shared/messaging/routing-keys';
 
 @Module({
   imports: [
     ConfigModule,
-
     RabbitMQModule.forRootAsync({
       imports: [ConfigModule],
-
       inject: [ConfigService],
 
       useFactory: (configService: ConfigService): RabbitMQConfig => ({
@@ -26,7 +25,7 @@ import { RABBITMQ_EXCHANGES, RABBITMQ_QUEUES, RABBITMQ_ROUTING_KEYS } from './ra
           {
             name: RABBITMQ_QUEUES.USER_CREATED,
             exchange: RABBITMQ_EXCHANGES.EVENTS,
-            routingKey: RABBITMQ_ROUTING_KEYS.USER_CREATED,
+            routingKey: ROUTING_KEYS.USER_CREATED,
           },
         ],
 
