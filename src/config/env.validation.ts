@@ -112,4 +112,19 @@ export const envValidationSchema = Joi.object({
   GOOGLE_CLIENT_SECRET: Joi.string().required().messages({
     'any.required': 'GOOGLE_CLIENT_SECRET is required',
   }),
+
+  JWT_MFA_CHALLENGE_SECRET: Joi.string().required().messages({
+    'any.required': 'JWT_MFA_CHALLENGE_SECRET is required',
+  }),
+  JWT_MFA_CHALLENGE_EXPIRATION: Joi.string().required().messages({
+    'any.required': 'JWT_MFA_CHALLENGE_EXPIRATION is required',
+  }),
+  TWO_FACTOR_ENCRYPTION_KEY: Joi.string().required().messages({
+    'any.required': 'TWO_FACTOR_ENCRYPTION_KEY is required',
+  }),
+
+  RABBITMQ_URI: Joi.string().uri().required().messages({
+    'string.uri': 'RABBITMQ_URI must be a valid URL',
+    'any.required': 'RABBITMQ_URI is required',
+  }),
 });
