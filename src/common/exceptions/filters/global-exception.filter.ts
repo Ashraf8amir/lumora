@@ -25,6 +25,14 @@ export class AllExceptionsFilter implements ExceptionFilter {
   ) {}
 
   catch(exception: unknown, host: ArgumentsHost): void {
+    if (host.getType() !== 'http') {
+      this.logger.error(
+        `Non-HTTP Exception caught: ${exception instanceof Error ? exception.message : 'Unknown'}`,
+        this.extractStack(exception),
+      );
+      throw exception;
+    }
+
     const { httpAdapter } = this.httpAdapterHost;
     const ctx = host.switchToHttp();
     const response = ctx.getResponse();

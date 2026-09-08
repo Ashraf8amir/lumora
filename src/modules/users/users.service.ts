@@ -9,15 +9,24 @@ import { CreateTechnicianDto } from './dto/create/create-technician.dto';
 import { QueryUserDto } from './dto/query-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UsersRepository } from './repositories/users.repository';
+import { UsersProducer } from './users.producer';
 // import { Types } from 'mongoose';
 
 const MONGO_DUPLICATE_KEY_ERROR_CODE = 11000;
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly usersRepo: UsersRepository) {}
+  constructor(
+    private readonly usersRepo: UsersRepository,
+    private readonly usersProducer: UsersProducer,
+  ) {}
 
   async createCustomer(dto: CreateCustomerDto) {
+    const fakeUserId = 'usr_' + Date.now();
+    const email = 'test@example.com';
+    const correlationId = crypto.randomUUID();
+
+    await this.usersProducer.publishUserCreated({ userId: fakeUserId, email }, correlationId);
     await this.ensureEmailIsUnique(dto.email);
     return this.handleDuplicateKey(() => this.usersRepo.createCustomer(dto));
   }

@@ -7,12 +7,17 @@ import { RESPONSE_MESSAGE_KEY } from '../decorators/response-message.decorator';
 import { ApiResponseDto } from '../dto/api-response.dto';
 import { ApiResponse } from '../interfaces/api-response.interface';
 import { isResponseEnvelope } from '../interfaces/response-envelope.interface';
+import { Nack } from '@golevelup/nestjs-rabbitmq';
 
 @Injectable()
-export class ApiResponseInterceptor<T> implements NestInterceptor<T, ApiResponse<T>> {
+export class ApiResponseInterceptor<T> implements NestInterceptor<T, any> {
   constructor(private readonly reflector: Reflector) {}
 
-  intercept(context: ExecutionContext, next: CallHandler<T>): Observable<ApiResponse<T>> {
+  intercept(context: ExecutionContext, next: CallHandler<T>): Observable<any> {
+    if (context.getType() !== 'http') {
+      return next.handle().pipe(map((data) => (data instanceof Nack ? data : undefined)));
+    }
+
     const response = context.switchToHttp().getResponse();
 
     const message =

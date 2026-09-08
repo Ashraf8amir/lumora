@@ -11,19 +11,13 @@ export class RabbitMqRetryPolicy {
     const nextAttempt = currentAttempt + 1;
 
     const routes = RABBITMQ_RETRY_ROUTES[event];
-
     if (!routes) {
-      return {
-        shouldRetry: false,
-      };
+      return { shouldRetry: false };
     }
 
     const routingKey = routes[nextAttempt];
-
     if (!routingKey) {
-      return {
-        shouldRetry: false,
-      };
+      return { shouldRetry: false };
     }
 
     return {

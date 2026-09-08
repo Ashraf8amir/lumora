@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { Nack, RabbitSubscribe } from '@golevelup/nestjs-rabbitmq';
 
 import { RABBITMQ_EXCHANGES, RABBITMQ_QUEUES } from '@/infrastructure/rabbitmq/rabbitmq.constants';
@@ -7,6 +7,7 @@ import { RabbitMqMessageHandler } from '@infrastructure/rabbitmq/rabbitmq.messag
 
 import type { RabbitMqMessage } from '@/shared/messaging/message.contract';
 import { ROUTING_KEYS } from '@/shared/messaging/routing-keys';
+import { NonRetryableMessagingError } from '@/shared/messaging/errors/non-retryable-messaging.error';
 
 interface UserCreatedPayload {
   userId: string;
@@ -15,6 +16,8 @@ interface UserCreatedPayload {
 
 @Injectable()
 export class UserCreatedConsumer {
+  private readonly logger = new Logger(UserCreatedConsumer.name);
+
   constructor(private readonly messageHandler: RabbitMqMessageHandler) {}
 
   @RabbitSubscribe({
@@ -31,11 +34,12 @@ export class UserCreatedConsumer {
   })
   async handle(message: RabbitMqMessage<UserCreatedPayload>): Promise<void | Nack> {
     return this.messageHandler.execute(message, async () => {
-      await this.handleUserCreated(message.payload);
+      this.logger.log(`Event Received Successfully!`);
+      await this.handleUserCreated();
     });
   }
 
-  private async handleUserCreated(payload: UserCreatedPayload): Promise<void> {
-    console.log(`Processing user: ${payload.userId}`);
+  private async handleUserCreated(): Promise<void> {
+    throw new NonRetryableMessagingError('Invalid user payload data');
   }
 }
