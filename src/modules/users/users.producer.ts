@@ -2,9 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
 
 import { RABBITMQ_EXCHANGES } from '@/infrastructure/rabbitmq/rabbitmq.constants';
+
+import { RabbitMqMessage } from '@/shared/messaging/message.contract';
 import { EVENTS } from '@/shared/messaging/event.types';
 import { ROUTING_KEYS } from '@/shared/messaging/routing-keys';
-import { RabbitMqMessage } from '@/shared/messaging/message.contract';
 
 interface UserCreatedPayload {
   userId: string;

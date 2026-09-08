@@ -12,10 +12,13 @@ import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
 import { UsersRepository } from './repositories/users.repository';
 import { UserCreatedConsumer } from './consumers/user-created.consumer';
+import { UsersProducer } from './users.producer';
+import { RabbitMqInfrastructureModule } from '@/infrastructure/rabbitmq/rabbitmq.module';
 
 @Module({
   imports: [
     CacheModule,
+    RabbitMqInfrastructureModule,
     MongooseModule.forFeature([
       {
         name: User.name,
@@ -29,7 +32,7 @@ import { UserCreatedConsumer } from './consumers/user-created.consumer';
     ]),
   ],
   controllers: [UsersController],
-  providers: [UsersService, UsersRepository, UserCreatedConsumer],
+  providers: [UsersService, UsersRepository, UserCreatedConsumer, UsersProducer],
   exports: [UsersService, UsersRepository],
 })
 export class UsersModule {}
