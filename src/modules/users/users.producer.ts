@@ -29,6 +29,14 @@ export class UsersProducer {
       RABBITMQ_EXCHANGES.EVENTS,
       ROUTING_KEYS.USER_CREATED,
       message,
+      {
+        persistent: true,
+        messageId: message.messageId,
+        correlationId: message.correlationId,
+        headers: {
+          'x-event-name': message.event,
+        },
+      },
     );
   }
 }
