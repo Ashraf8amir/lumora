@@ -8,6 +8,7 @@ import { RabbitMqMessageHandler } from '@infrastructure/rabbitmq/rabbitmq.messag
 import type { RabbitMqMessage } from '@/shared/messaging/message.contract';
 import { ROUTING_KEYS } from '@/shared/messaging/routing-keys';
 import { NonRetryableMessagingError } from '@/shared/messaging/errors/non-retryable-messaging.error';
+import { ClientSession } from 'mongoose';
 
 interface UserCreatedPayload {
   userId: string;
@@ -33,13 +34,16 @@ export class UserCreatedConsumer {
     },
   })
   async handle(message: RabbitMqMessage<UserCreatedPayload>): Promise<void | Nack> {
-    return this.messageHandler.execute(message, async () => {
-      this.logger.log(`Event Received Successfully!`);
-      await this.handleUserCreated();
+    return this.messageHandler.execute(message, async (session) => {
+      this.logger.debug(`Processing user created message: ${message.messageId}`);
+      await this.handleUserCreated(message.payload, session);
     });
   }
 
-  private async handleUserCreated(): Promise<void> {
+  private async handleUserCreated(
+    _payload: UserCreatedPayload,
+    _session: ClientSession,
+  ): Promise<void> {
     throw new NonRetryableMessagingError('Invalid user payload data');
   }
 }

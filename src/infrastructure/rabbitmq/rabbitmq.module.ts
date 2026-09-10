@@ -6,10 +6,23 @@ import { ROUTING_KEYS } from '../../shared/messaging/routing-keys';
 import { RabbitMqRetryPublisher } from './retry/rabbitmq-retry.publisher';
 import { RabbitMqRetryPolicy } from './retry/rabbitmq-retry.policy';
 import { RabbitMqMessageHandler } from './rabbitmq.message-handler';
+import {
+  MessageIdempotency,
+  MessageIdempotencySchema,
+} from './idempotency/message-idempotency.schema';
+import { MongooseModule } from '@nestjs/mongoose';
+import { MessageIdempotencyService } from './idempotency/message-idempotency.service';
+import { MessageIdempotencyRepository } from './idempotency/message-idempotency.repository';
 
 @Module({
   imports: [
     ConfigModule,
+    MongooseModule.forFeature([
+      {
+        name: MessageIdempotency.name,
+        schema: MessageIdempotencySchema,
+      },
+    ]),
     RabbitMQModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -114,8 +127,22 @@ import { RabbitMqMessageHandler } from './rabbitmq.message-handler';
     }),
   ],
 
-  providers: [RabbitMqMessageHandler, RabbitMqRetryPolicy, RabbitMqRetryPublisher],
+  providers: [
+    RabbitMqMessageHandler,
+    RabbitMqRetryPolicy,
+    RabbitMqRetryPublisher,
 
-  exports: [RabbitMQModule, RabbitMqMessageHandler, RabbitMqRetryPolicy, RabbitMqRetryPublisher],
+    MessageIdempotencyRepository,
+    MessageIdempotencyService,
+  ],
+
+  exports: [
+    RabbitMQModule,
+    RabbitMqMessageHandler,
+    RabbitMqRetryPolicy,
+    RabbitMqRetryPublisher,
+
+    MessageIdempotencyService,
+  ],
 })
 export class RabbitMqInfrastructureModule {}

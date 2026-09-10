@@ -1,5 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Nack } from '@golevelup/nestjs-rabbitmq';
+import { ClientSession, Connection } from 'mongoose';
+import { InjectConnection } from '@nestjs/mongoose';
 
 import { RabbitMqMessage } from '@/shared/messaging/message.contract';
 import { NonRetryableMessagingError } from '@shared/messaging/errors/non-retryable-messaging.error';
@@ -7,6 +9,7 @@ import { RetryableMessagingError } from '@shared/messaging/errors/retryable-mess
 
 import { RabbitMqRetryPolicy } from './retry/rabbitmq-retry.policy';
 import { RabbitMqRetryPublisher } from './retry/rabbitmq-retry.publisher';
+import { MessageIdempotencyService } from './idempotency/message-idempotency.service';
 
 @Injectable()
 export class RabbitMqMessageHandler {
@@ -15,34 +18,61 @@ export class RabbitMqMessageHandler {
   constructor(
     private readonly retryPolicy: RabbitMqRetryPolicy,
     private readonly retryPublisher: RabbitMqRetryPublisher,
+    private readonly idempotencyService: MessageIdempotencyService,
+
+    @InjectConnection()
+    private readonly connection: Connection,
   ) {}
 
   async execute<T>(
     message: RabbitMqMessage<T>,
-    handler: () => Promise<void>,
+    handler: (session: ClientSession) => Promise<void>,
   ): Promise<void | Nack> {
+    const shouldProcess = await this.idempotencyService.startProcessing(
+      message.messageId,
+      message.event,
+    );
+
+    if (!shouldProcess) {
+      this.logger.warn(`Duplicate or active message ignored: ${message.messageId}`);
+      return;
+    }
+
     try {
-      await handler();
+      await this.connection.transaction(async (session) => {
+        await handler(session);
+
+        await this.idempotencyService.markCompleted(message.messageId, session);
+      });
+
+      this.logger.debug(`Message processed successfully: ${message.messageId}`);
 
       return;
     } catch (error) {
-      if (error instanceof NonRetryableMessagingError) {
-        this.logger.error(`Non-retryable message failure: ${message.messageId}`, error.stack);
+      return this.handleProcessingError(message, error);
+    }
+  }
 
-        return new Nack(false);
-      }
-
-      if (error instanceof RetryableMessagingError) {
-        return this.handleRetryableError(message, error);
-      }
-
-      this.logger.error(
-        `Unknown message failure: ${message.messageId}`,
-        error instanceof Error ? error.stack : undefined,
-      );
+  private async handleProcessingError<T>(
+    message: RabbitMqMessage<T>,
+    error: unknown,
+  ): Promise<Nack | void> {
+    if (error instanceof NonRetryableMessagingError) {
+      this.logger.error(`Non-retryable message failure: ${message.messageId}`, error.stack);
 
       return new Nack(false);
     }
+
+    if (error instanceof RetryableMessagingError) {
+      return this.handleRetryableError(message, error);
+    }
+
+    this.logger.error(
+      `Unknown message failure: ${message.messageId}`,
+      error instanceof Error ? error.stack : undefined,
+    );
+
+    return new Nack(false);
   }
 
   private async handleRetryableError<T>(
